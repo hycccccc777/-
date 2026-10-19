@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
-import com.ruoyi.campus.api.ApiException;
+import com.ruoyi.campus.observability.TraceContext;
 import com.ruoyi.common.utils.SecurityUtils;
 
 /**
@@ -62,8 +62,8 @@ public class RateLimitInterceptor implements HandlerInterceptor
         {
             log.warn("ratelimit rejected rule={} dimension={} limit={}/{}s", rule.key(), dimension, rule.permits(),
                     rule.seconds());
-            // 429 语义正确：调用方应退避重试，而不是继续猛打
-            throw new ApiException(429, "请求过于频繁，请稍后再试");
+            writeTooManyRequests(response);
+            return false;
         }
         return true;
     }
@@ -105,5 +105,28 @@ public class RateLimitInterceptor implements HandlerInterceptor
         }
         String remote = request.getRemoteAddr();
         return (remote == null || remote.isBlank()) ? "unknown" : remote;
+    }
+
+    /**
+     * 直接写 429 响应。
+     *
+     * <p>不在拦截器里 throw ApiException：该异常会落到若依全局异常处理器，
+     * 返回 HTTP 200 + 后台格式 {msg, code:500}，与前端约定的
+     * {code, message} 契约不一致，前端会显示成「请求失败」。
+     * 这里显式写出正确状态码与契约，并带上 traceId 便于对账。
+     */
+    private void writeTooManyRequests(HttpServletResponse response)
+    {
+        response.setStatus(429);
+        response.setContentType("application/json;charset=UTF-8");
+        response.setHeader(TraceContext.HEADER, TraceContext.get());
+        try
+        {
+            response.getWriter().write("{\"code\":429,\"message\":\"请求过于频繁，请稍后再试\",\"data\":null}");
+        }
+        catch (Exception e)
+        {
+            log.error("写入限流响应失败", e);
+        }
     }
 }

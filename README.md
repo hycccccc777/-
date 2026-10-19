@@ -382,7 +382,66 @@ docker compose up -d --build
 
 ---
 
-## 十二、持续集成（GitHub Actions）
+## 十二、非 Docker 部署（已实测验证）
+
+开发机未安装 Docker，`docker-compose.yml` 至今**未在真实环境执行过**。
+为此提供并实测了一条不依赖容器的部署路径，两者效果等价。
+
+### 前置条件
+
+| 依赖 | 验证状态 |
+| --- | --- |
+| MySQL 26.7（服务名 `MySQL267`，3306） | ✅ 实测 |
+| Redis（服务 `Redis`，6379） | ✅ 实测 |
+| JDK 17+ | ✅ 实测（JDK 27） |
+
+### 启动步骤
+
+```powershell
+# 1. 构建可执行 jar
+cd RuoYi-Vue-master\RuoYi-Vue-master
+mvn -pl ruoyi-admin -am -DskipTests package
+
+# 2. 用环境变量注入凭据并启动（不要把密码写进命令行）
+$env:CAMPUS_DB_PASSWORD = "<你的数据库密码>"
+$env:LOG_PATH           = "$PWD\logs"
+java -jar ruoyi-admin\target\ruoyi-admin.jar
+
+# 3. 验证服务已就绪
+curl http://localhost:8080/api/v1/products?pageSize=1
+```
+
+服务在 5 秒左右启动完成，Flyway 会自动校验/迁移 `shop` 库。
+
+### 实测结论（2026-10-19）
+
+启动后用真实 HTTP 请求验证了以下行为，全部通过：
+
+| 验证项 | 结果 |
+| --- | --- |
+| 服务启动 + Flyway 迁移 | 5.2 秒就绪，迁移版本 1、2 均 success |
+| `GET /api/v1/products` | 200，返回 8 件商品 |
+| `X-Trace-Id` 响应头 | 16 位十六进制随机值 |
+| 前端传入 traceId 的透传 | 响应头原样返回 `client-trace-login-01`，且该值出现在 `api-access.log` |
+| 登录 `13800001001 / admin123` | 200，`token` 206 字符、`refreshToken` 32 字符、`expiresIn` 1800 |
+| 带 token 访问 `/api/v1/cart` | 200，访问日志记录 `userId=1001` |
+| 刷新令牌 | 返回的新 `token` 与新 `refreshToken` 均与旧值不同 |
+| 旧 refreshToken 复用 | 401「刷新令牌已失效，请重新登录」（一次性语义生效） |
+| 登录限流 | 第 10 次后返回 **HTTP 429**，`Content-Type: application/json; charset=UTF-8`，响应体 `{"code":429,"message":"请求过于频繁，请稍后再试","data":null}` |
+
+访问日志样例（`logs/api-access.log`）：
+
+```
+2026-10-19 21:18:09.864 [trace=c07294cd9d9a4875] api method=GET path=/api/v1/cart status=200 costMs=51 userId=1001
+```
+
+> 这轮实测抓出并修复了两个真实缺陷：限流拒绝原先落到若依全局异常处理器，
+> 返回 HTTP 200 + 后台格式 `{msg,code:500}`，前端会显示成「请求失败」；
+> 以及访问日志的 `userId` 因过滤器在 Spring Security 之前执行而始终为 anonymous。
+> 两者均已修正并复验。
+
+---
+## 十三、持续集成（GitHub Actions）
 
 `.github/workflows/ci.yml` 在 push / PR 时自动执行：
 
@@ -396,7 +455,7 @@ docker compose up -d --build
 > ⚠ **当前工作区还不是 git 仓库**，CI 只有在推送到 GitHub 后才会生效。建议先 `git init` 并纳入版本管理（`.env`、`node_modules`、`target` 必须进 `.gitignore`）。
 
 ---
-## 十三、尚未实现（诚实说明）
+## 十四、尚未实现（诚实说明）
 
 - **真实支付**：使用沙箱支付（`POST /api/v1/pay/{payNo}/confirm` 直接置为成功）。接入真实网关需替换为异步回调校验。
 - **配送费**：暂恒为 0，未区分自提 / 配送计费。

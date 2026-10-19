@@ -11,7 +11,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import com.ruoyi.common.utils.SecurityUtils;
+
 
 /**
  * /api/v1 的链路追踪与结构化访问日志入口。
@@ -71,22 +71,9 @@ public class ApiTraceFilter extends OncePerRequestFilter
         {
             long costMs = (System.nanoTime() - startNanos) / 1_000_000;
             accessLog.info("api method={} path={} status={} costMs={} userId={}", request.getMethod(),
-                    request.getRequestURI(), status, costMs, currentUserId());
+                    request.getRequestURI(), status, costMs, request.getAttribute(RequestUserInterceptor.ATTR_USER_ID));
             // 必须清理：线程池复用会把 traceId 带到下一个请求
             TraceContext.clear();
-        }
-    }
-
-    /** 未登录时返回 0；SecurityUtils 在无认证上下文下会抛异常，这里不能让它影响主流程 */
-    private String currentUserId()
-    {
-        try
-        {
-            return String.valueOf(SecurityUtils.getUserId());
-        }
-        catch (Exception e)
-        {
-            return "anonymous";
         }
     }
 }
