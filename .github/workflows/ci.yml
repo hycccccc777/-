@@ -101,6 +101,8 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: 校验 compose 文件语法
+        env:
+          COMPOSE_PROJECT_NAME: campus-trade
         run: docker compose config --quiet && echo "compose 语法正确"
 
       - name: 构建并启动全部服务

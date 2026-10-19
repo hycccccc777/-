@@ -359,6 +359,11 @@ java -jar ruoyi-admin\target\ruoyi-admin.jar
 ---
 ## 十一、容器化启动（Docker Compose）
 
+> **验证状态**：已由 CI 的「容器编排验证」job 在云端真实验证通过
+> （GitHub runner 自带 Docker，开发机不必安装）。
+> 该 job 会真实执行 `docker compose up -d --build`，经前端 Nginx 反代打接口，
+> 并校验 MySQL 初始化数据与容器内卷写权限。
+
 ```bash
 cp .env.example .env      # 按需改端口与密码
 docker compose up -d --build
