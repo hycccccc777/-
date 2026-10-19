@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.campus.mapper.CtRefundMapper">
+
+    <resultMap type="CtRefund" id="CtRefundResult">
+        <id     property="refundId"          column="refund_id"          />
+        <result property="refundNo"          column="refund_no"          />
+        <result property="orderId"           column="order_id"           />
+        <result property="orderNo"           column="order_no"           />
+        <result property="userId"            column="user_id"            />
+        <result property="sellerId"          column="seller_id"          />
+        <result property="reason"            column="reason"             />
+        <result property="refundAmount"      column="refund_amount"      />
+        <result property="status"            column="status"             />
+        <result property="orderStatusBefore" column="order_status_before" />
+        <result property="handleBy"          column="handle_by"          />
+        <result property="handleTime"        column="handle_time"        />
+        <result property="handleRemark"      column="handle_remark"      />
+        <result property="delFlag"           column="del_flag"           />
+        <result property="createBy"          column="create_by"          />
+        <result property="createTime"        column="create_time"        />
+        <result property="updateBy"          column="update_by"          />
+        <result property="updateTime"        column="update_time"        />
+    </resultMap>
+
+    <sql id="selectCtRefundVo">
+        select refund_id, refund_no, order_id, order_no, user_id, seller_id, reason, refund_amount, status,
+               order_status_before, handle_by, handle_time, handle_remark, del_flag, create_by, create_time, update_by, update_time
+        from ct_refund
+    </sql>
+
+    <select id="selectCtRefundList" parameterType="CtRefund" resultMap="CtRefundResult">
+        <include refid="selectCtRefundVo"/>
+        <where>
+            del_flag = '0'
+            <if test="refundNo != null and refundNo != ''">AND refund_no = #{refundNo}</if>
+            <if test="orderNo != null and orderNo != ''">AND order_no = #{orderNo}</if>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="sellerId != null">AND seller_id = #{sellerId}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectCtRefundById" parameterType="Long" resultMap="CtRefundResult">
+        <include refid="selectCtRefundVo"/>
+        where refund_id = #{refundId}
+    </select>
+
+    <insert id="insertCtRefund" parameterType="CtRefund" useGeneratedKeys="true" keyProperty="refundId">
+        insert into ct_refund
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="refundNo != null and refundNo != ''">refund_no,</if>
+            <if test="orderId != null">order_id,</if>
+            <if test="orderNo != null and orderNo != ''">order_no,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="sellerId != null">seller_id,</if>
+            <if test="reason != null">reason,</if>
+            <if test="refundAmount != null">refund_amount,</if>
+            <if test="status != null">status,</if>
+            <if test="orderStatusBefore != null">order_status_before,</if>
+            <if test="createBy != null">create_by,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="refundNo != null and refundNo != ''">#{refundNo},</if>
+            <if test="orderId != null">#{orderId},</if>
+            <if test="orderNo != null and orderNo != ''">#{orderNo},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="sellerId != null">#{sellerId},</if>
+            <if test="reason != null">#{reason},</if>
+            <if test="refundAmount != null">#{refundAmount},</if>
+            <if test="status != null">#{status},</if>
+            <if test="orderStatusBefore != null">#{orderStatusBefore},</if>
+            <if test="createBy != null">#{createBy},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateCtRefund" parameterType="CtRefund">
+        update ct_refund
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="reason != null">reason = #{reason},</if>
+            <if test="refundAmount != null">refund_amount = #{refundAmount},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="handleBy != null">handle_by = #{handleBy},</if>
+            <if test="handleTime != null">handle_time = #{handleTime},</if>
+            <if test="handleRemark != null">handle_remark = #{handleRemark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </trim>
+        where refund_id = #{refundId}
+    </update>
+
+    <update id="deleteCtRefundById" parameterType="Long">
+        update ct_refund set del_flag = '2' where refund_id = #{refundId}
+    </update>
+
+    <update id="deleteCtRefundByIds" parameterType="Long">
+        update ct_refund set del_flag = '2' where refund_id in
+        <foreach collection="array" item="refundId" open="(" separator="," close=")">
+            #{refundId}
+        </foreach>
+    </update>
+
+</mapper>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.campus.mapper.CtCartItemMapper">
+
+    <resultMap type="CtCartItem" id="CtCartItemResult">
+        <id     property="cartItemId" column="cart_item_id" />
+        <result property="userId"     column="user_id"      />
+        <result property="productId"  column="product_id"   />
+        <result property="quantity"   column="quantity"     />
+        <result property="selected"   column="selected"     />
+        <result property="createTime" column="create_time"  />
+        <result property="updateTime" column="update_time"  />
+    </resultMap>
+
+    <sql id="selectCtCartItemVo">
+        select cart_item_id, user_id, product_id, quantity, selected, create_time, update_time
+        from ct_cart_item
+    </sql>
+
+    <select id="selectCtCartItemList" parameterType="CtCartItem" resultMap="CtCartItemResult">
+        <include refid="selectCtCartItemVo"/>
+        <where>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="productId != null">AND product_id = #{productId}</if>
+            <if test="selected != null and selected != ''">AND selected = #{selected}</if>
+        </where>
+    </select>
+
+    <select id="selectCtCartItemById" parameterType="Long" resultMap="CtCartItemResult">
+        <include refid="selectCtCartItemVo"/>
+        where cart_item_id = #{cartItemId}
+    </select>
+
+    <insert id="insertCtCartItem" parameterType="CtCartItem" useGeneratedKeys="true" keyProperty="cartItemId">
+        insert into ct_cart_item
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="quantity != null">quantity,</if>
+            <if test="selected != null">selected,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="quantity != null">#{quantity},</if>
+            <if test="selected != null">#{selected},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateCtCartItem" parameterType="CtCartItem">
+        update ct_cart_item
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="selected != null">selected = #{selected},</if>
+            update_time = sysdate()
+        </trim>
+        where cart_item_id = #{cartItemId}
+    </update>
+
+    <delete id="deleteCtCartItemById" parameterType="Long">
+        delete from ct_cart_item where cart_item_id = #{cartItemId}
+    </delete>
+
+    <delete id="deleteCtCartItemByIds" parameterType="Long">
+        delete from ct_cart_item where cart_item_id in
+        <foreach collection="array" item="cartItemId" open="(" separator="," close=")">
+            #{cartItemId}
+        </foreach>
+    </delete>
+
+</mapper>

@@ -1,0 +1,107 @@
+# =====================================================================
+# CI：提交即跑「编译 + 单元/集成测试 + 镜像构建」
+# 任何一步失败都会阻止合并，保证主干始终可构建、可测试。
+# =====================================================================
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  backend:
+    name: 后端编译与测试
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test123456
+          TZ: Asia/Shanghai
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ptest123456"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+
+    defaults:
+      run:
+        working-directory: RuoYi-Vue-master/RuoYi-Vue-master
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: 编译打包（跳过测试）
+        run: mvn -B -DskipTests clean package
+
+      - name: 准备测试库 shop_test
+        run: |
+          mysql -h127.0.0.1 -uroot -ptest123456 \
+            -e "create database if not exists shop_test default character set utf8mb4 collate utf8mb4_general_ci;"
+          for f in ry_20260417 quartz campus_trade campus_menu campus_seed_products campus_test_data; do
+            echo "importing sql/$f.sql"
+            mysql -h127.0.0.1 -uroot -ptest123456 --default-character-set=utf8mb4 shop_test < "sql/$f.sql"
+          done
+
+      - name: 运行测试
+        run: mvn -B -pl ruoyi-admin -am test
+
+      - name: 上传测试报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-reports
+          path: RuoYi-Vue-master/RuoYi-Vue-master/ruoyi-admin/target/surefire-reports/
+          if-no-files-found: ignore
+
+      - name: 构建后端镜像
+        run: docker build -t campus-backend:${{ github.sha }} .
+
+  frontend:
+    name: 前端构建与测试
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 校易淘前端-后端交接-2026-10-19T01-05-57-755Z
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: 校易淘前端-后端交接-2026-10-19T01-05-57-755Z/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行单元测试
+        run: npm test
+
+      - name: 构建
+        run: npm run build
+
+      - name: 构建前端镜像
+        run: docker build -t campus-frontend:${{ github.sha }} .

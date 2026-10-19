@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.campus.mapper.CtAddressMapper">
+
+    <resultMap type="CtAddress" id="CtAddressResult">
+        <id     property="addressId"  column="address_id"  />
+        <result property="userId"     column="user_id"     />
+        <result property="receiver"   column="receiver"    />
+        <result property="phone"      column="phone"       />
+        <result property="schoolId"   column="school_id"   />
+        <result property="detail"     column="detail"      />
+        <result property="isDefault"  column="is_default"  />
+        <result property="delFlag"    column="del_flag"    />
+        <result property="createBy"   column="create_by"   />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy"   column="update_by"   />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectCtAddressVo">
+        select address_id, user_id, receiver, phone, school_id, detail, is_default, del_flag, create_by, create_time, update_by, update_time
+        from ct_address
+    </sql>
+
+    <select id="selectCtAddressList" parameterType="CtAddress" resultMap="CtAddressResult">
+        <include refid="selectCtAddressVo"/>
+        <where>
+            del_flag = '0'
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="receiver != null and receiver != ''">AND receiver like concat('%', #{receiver}, '%')</if>
+            <if test="phone != null and phone != ''">AND phone = #{phone}</if>
+            <if test="schoolId != null">AND school_id = #{schoolId}</if>
+        </where>
+        order by is_default desc, address_id desc
+    </select>
+
+    <select id="selectCtAddressById" parameterType="Long" resultMap="CtAddressResult">
+        <include refid="selectCtAddressVo"/>
+        where address_id = #{addressId}
+    </select>
+
+    <insert id="insertCtAddress" parameterType="CtAddress" useGeneratedKeys="true" keyProperty="addressId">
+        insert into ct_address
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="receiver != null and receiver != ''">receiver,</if>
+            <if test="phone != null">phone,</if>
+            <if test="schoolId != null">school_id,</if>
+            <if test="detail != null">detail,</if>
+            <if test="isDefault != null">is_default,</if>
+            <if test="createBy != null">create_by,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="receiver != null and receiver != ''">#{receiver},</if>
+            <if test="phone != null">#{phone},</if>
+            <if test="schoolId != null">#{schoolId},</if>
+            <if test="detail != null">#{detail},</if>
+            <if test="isDefault != null">#{isDefault},</if>
+            <if test="createBy != null">#{createBy},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateCtAddress" parameterType="CtAddress">
+        update ct_address
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="receiver != null and receiver != ''">receiver = #{receiver},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="schoolId != null">school_id = #{schoolId},</if>
+            <if test="detail != null">detail = #{detail},</if>
+            <if test="isDefault != null">is_default = #{isDefault},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </trim>
+        where address_id = #{addressId}
+    </update>
+
+    <update id="deleteCtAddressById" parameterType="Long">
+        update ct_address set del_flag = '2' where address_id = #{addressId}
+    </update>
+
+    <update id="deleteCtAddressByIds" parameterType="Long">
+        update ct_address set del_flag = '2' where address_id in
+        <foreach collection="array" item="addressId" open="(" separator="," close=")">
+            #{addressId}
+        </foreach>
+    </update>
+
+</mapper>

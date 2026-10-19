@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.campus.mapper.CtPaymentMapper">
+
+    <resultMap type="CtPayment" id="CtPaymentResult">
+        <id     property="paymentId"    column="payment_id"    />
+        <result property="payNo"        column="pay_no"        />
+        <result property="orderNo"      column="order_no"      />
+        <result property="userId"       column="user_id"       />
+        <result property="amount"       column="amount"        />
+        <result property="payMethod"    column="pay_method"    />
+        <result property="status"       column="status"        />
+        <result property="thirdPartyNo" column="third_party_no" />
+        <result property="callbackTime" column="callback_time" />
+        <result property="createTime"   column="create_time"   />
+        <result property="updateTime"   column="update_time"   />
+    </resultMap>
+
+    <sql id="selectCtPaymentVo">
+        select payment_id, pay_no, order_no, user_id, amount, pay_method, status, third_party_no, callback_time, create_time, update_time
+        from ct_payment
+    </sql>
+
+    <select id="selectCtPaymentList" parameterType="CtPayment" resultMap="CtPaymentResult">
+        <include refid="selectCtPaymentVo"/>
+        <where>
+            <if test="payNo != null and payNo != ''">AND pay_no = #{payNo}</if>
+            <if test="orderNo != null and orderNo != ''">AND order_no = #{orderNo}</if>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="payMethod != null and payMethod != ''">AND pay_method = #{payMethod}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectCtPaymentById" parameterType="Long" resultMap="CtPaymentResult">
+        <include refid="selectCtPaymentVo"/>
+        where payment_id = #{paymentId}
+    </select>
+
+    <select id="selectCtPaymentByPayNo" parameterType="String" resultMap="CtPaymentResult">
+        <include refid="selectCtPaymentVo"/>
+        where pay_no = #{payNo} limit 1
+    </select>
+
+    <insert id="insertCtPayment" parameterType="CtPayment" useGeneratedKeys="true" keyProperty="paymentId">
+        insert into ct_payment
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="payNo != null and payNo != ''">pay_no,</if>
+            <if test="orderNo != null and orderNo != ''">order_no,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="amount != null">amount,</if>
+            <if test="payMethod != null">pay_method,</if>
+            <if test="status != null">status,</if>
+            <if test="thirdPartyNo != null">third_party_no,</if>
+            <if test="callbackTime != null">callback_time,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="payNo != null and payNo != ''">#{payNo},</if>
+            <if test="orderNo != null and orderNo != ''">#{orderNo},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="amount != null">#{amount},</if>
+            <if test="payMethod != null">#{payMethod},</if>
+            <if test="status != null">#{status},</if>
+            <if test="thirdPartyNo != null">#{thirdPartyNo},</if>
+            <if test="callbackTime != null">#{callbackTime},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateCtPayment" parameterType="CtPayment">
+        update ct_payment
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="payNo != null and payNo != ''">pay_no = #{payNo},</if>
+            <if test="orderNo != null and orderNo != ''">order_no = #{orderNo},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="payMethod != null">pay_method = #{payMethod},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="thirdPartyNo != null">third_party_no = #{thirdPartyNo},</if>
+            <if test="callbackTime != null">callback_time = #{callbackTime},</if>
+            update_time = sysdate()
+        </trim>
+        where payment_id = #{paymentId}
+    </update>
+
+    <delete id="deleteCtPaymentById" parameterType="Long">
+        delete from ct_payment where payment_id = #{paymentId}
+    </delete>
+
+    <delete id="deleteCtPaymentByIds" parameterType="Long">
+        delete from ct_payment where payment_id in
+        <foreach collection="array" item="paymentId" open="(" separator="," close=")">
+            #{paymentId}
+        </foreach>
+    </delete>
+
+</mapper>

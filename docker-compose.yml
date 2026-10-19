@@ -1,0 +1,92 @@
+# =====================================================================
+# 校园二手交易系统 · 一键启动全部依赖
+#   docker compose up -d --build
+#   前端 http://localhost:5174   后端 http://localhost:8080
+# 首次启动 MySQL 会自动执行 sql/ 目录下的建表与演示数据脚本。
+# =====================================================================
+
+services:
+
+  mysql:
+    image: mysql:8.4
+    container_name: campus-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-qazwsx@134567}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-shop}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 只读挂载 SQL 目录，容器内由引导脚本按正确顺序 source
+      - ./RuoYi-Vue-master/RuoYi-Vue-master/sql:/scripts:ro
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-qazwsx@134567}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: campus-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./RuoYi-Vue-master/RuoYi-Vue-master
+      dockerfile: Dockerfile
+    image: campus-backend:latest
+    container_name: campus-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      SPRING_DATASOURCE_DRUID_MASTER_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-shop}?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_DRUID_MASTER_USERNAME: root
+      SPRING_DATASOURCE_DRUID_MASTER_PASSWORD: ${MYSQL_ROOT_PASSWORD:-qazwsx@134567}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      # 支付回调签名密钥，只从环境注入，不写进代码或镜像
+      CAMPUS_PAY_NOTIFY_SECRET: ${CAMPUS_PAY_SECRET:-change-me-in-production}
+      RUYI_PROFILE: ${UPLOAD_DIR:-/app/uploadPath}
+    volumes:
+      - upload-data:/app/uploadPath
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  frontend:
+    build:
+      context: ./校易淘前端-后端交接-2026-10-19T01-05-57-755Z
+      dockerfile: Dockerfile
+    image: campus-frontend:latest
+    container_name: campus-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-5174}:80"
+
+volumes:
+  mysql-data:
+  redis-data:
+  upload-data:

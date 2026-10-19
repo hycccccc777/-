@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.campus.mapper.CtProductMapper">
+
+    <resultMap type="CtProduct" id="CtProductResult">
+        <id     property="productId"     column="product_id"     />
+        <result property="title"         column="title"          />
+        <result property="categoryId"    column="category_id"    />
+        <result property="sellerId"      column="seller_id"      />
+        <result property="sellerType"    column="seller_type"    />
+        <result property="price"         column="price"          />
+        <result property="originalPrice" column="original_price" />
+        <result property="stock"         column="stock"          />
+        <result property="conditionCode" column="condition_code" />
+        <result property="schoolId"      column="school_id"      />
+        <result property="location"      column="location"       />
+        <result property="coverUrl"      column="cover_url"      />
+        <result property="tag"           column="tag"            />
+        <result property="description"   column="description"    />
+        <result property="status"        column="status"         />
+        <result property="auditRemark"   column="audit_remark"   />
+        <result property="viewCount"     column="view_count"     />
+        <result property="favoriteCount" column="favorite_count" />
+        <result property="delFlag"       column="del_flag"       />
+        <result property="createBy"      column="create_by"      />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"      column="update_by"      />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectCtProductVo">
+        select product_id, title, category_id, seller_id, seller_type, price, original_price, stock, condition_code, school_id, location, cover_url, tag, description, status, audit_remark, view_count, favorite_count, del_flag, create_by, create_time, update_by, update_time
+        from ct_product
+    </sql>
+
+    <select id="selectCtProductList" parameterType="CtProduct" resultMap="CtProductResult">
+        <include refid="selectCtProductVo"/>
+        <where>
+            del_flag = '0'
+            <if test="productId != null">AND product_id = #{productId}</if>
+            <if test="title != null and title != ''">AND title like concat('%', #{title}, '%')</if>
+            <if test="categoryId != null">AND category_id = #{categoryId}</if>
+            <if test="sellerId != null">AND seller_id = #{sellerId}</if>
+            <if test="sellerType != null and sellerType != ''">AND seller_type = #{sellerType}</if>
+            <if test="conditionCode != null and conditionCode != ''">AND condition_code = #{conditionCode}</if>
+            <if test="schoolId != null">AND school_id = #{schoolId}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+            <if test="params.beginTime != null and params.beginTime != ''">AND date_format(create_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')</if>
+            <if test="params.endTime != null and params.endTime != ''">AND date_format(create_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectCtProductById" parameterType="Long" resultMap="CtProductResult">
+        <include refid="selectCtProductVo"/>
+        where product_id = #{productId}
+    </select>
+
+    <insert id="insertCtProduct" parameterType="CtProduct" useGeneratedKeys="true" keyProperty="productId">
+        insert into ct_product
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="title != null and title != ''">title,</if>
+            <if test="categoryId != null">category_id,</if>
+            <if test="sellerId != null">seller_id,</if>
+            <if test="sellerType != null and sellerType != ''">seller_type,</if>
+            <if test="price != null">price,</if>
+            <if test="originalPrice != null">original_price,</if>
+            <if test="stock != null">stock,</if>
+            <if test="conditionCode != null and conditionCode != ''">condition_code,</if>
+            <if test="schoolId != null">school_id,</if>
+            <if test="location != null and location != ''">location,</if>
+            <if test="coverUrl != null">cover_url,</if>
+            <if test="tag != null">tag,</if>
+            <if test="description != null">description,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="auditRemark != null">audit_remark,</if>
+            <if test="viewCount != null">view_count,</if>
+            <if test="favoriteCount != null">favorite_count,</if>
+            <if test="createBy != null">create_by,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="title != null and title != ''">#{title},</if>
+            <if test="categoryId != null">#{categoryId},</if>
+            <if test="sellerId != null">#{sellerId},</if>
+            <if test="sellerType != null and sellerType != ''">#{sellerType},</if>
+            <if test="price != null">#{price},</if>
+            <if test="originalPrice != null">#{originalPrice},</if>
+            <if test="stock != null">#{stock},</if>
+            <if test="conditionCode != null and conditionCode != ''">#{conditionCode},</if>
+            <if test="schoolId != null">#{schoolId},</if>
+            <if test="location != null and location != ''">#{location},</if>
+            <if test="coverUrl != null">#{coverUrl},</if>
+            <if test="tag != null">#{tag},</if>
+            <if test="description != null">#{description},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="auditRemark != null">#{auditRemark},</if>
+            <if test="viewCount != null">#{viewCount},</if>
+            <if test="favoriteCount != null">#{favoriteCount},</if>
+            <if test="createBy != null">#{createBy},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateCtProduct" parameterType="CtProduct">
+        update ct_product
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="sellerId != null">seller_id = #{sellerId},</if>
+            <if test="sellerType != null and sellerType != ''">seller_type = #{sellerType},</if>
+            <if test="price != null">price = #{price},</if>
+            <if test="originalPrice != null">original_price = #{originalPrice},</if>
+            <if test="stock != null">stock = #{stock},</if>
+            <if test="conditionCode != null and conditionCode != ''">condition_code = #{conditionCode},</if>
+            <if test="schoolId != null">school_id = #{schoolId},</if>
+            <if test="location != null and location != ''">location = #{location},</if>
+            <if test="coverUrl != null">cover_url = #{coverUrl},</if>
+            <if test="tag != null">tag = #{tag},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
+            <if test="viewCount != null">view_count = #{viewCount},</if>
+            <if test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </trim>
+        where product_id = #{productId}
+    </update>
+
+    <update id="deleteCtProductById" parameterType="Long">
+        update ct_product set del_flag = '2' where product_id = #{productId}
+    </update>
+
+    <update id="deleteCtProductByIds" parameterType="Long">
+        update ct_product set del_flag = '2' where product_id in
+        <foreach collection="array" item="productId" open="(" separator="," close=")">
+            #{productId}
+        </foreach>
+    </update>
+
+    <resultMap type="com.ruoyi.campus.domain.vo.CtProductVo" id="CtProductVoResult">
+        <id     property="productId"     column="product_id"     />
+        <result property="title"         column="title"          />
+        <result property="categoryId"    column="category_id"    />
+        <result property="sellerId"      column="seller_id"      />
+        <result property="sellerType"    column="seller_type"    />
+        <result property="price"         column="price"          />
+        <result property="originalPrice" column="original_price" />
+        <result property="stock"         column="stock"          />
+        <result property="conditionCode" column="condition_code" />
+        <result property="schoolId"      column="school_id"      />
+        <result property="location"      column="location"       />
+        <result property="coverUrl"      column="cover_url"      />
+        <result property="tag"           column="tag"            />
+        <result property="description"   column="description"    />
+        <result property="status"        column="status"         />
+        <result property="auditRemark"   column="audit_remark"   />
+        <result property="viewCount"     column="view_count"     />
+        <result property="favoriteCount" column="favorite_count" />
+        <result property="delFlag"       column="del_flag"       />
+        <result property="createBy"      column="create_by"      />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"      column="update_by"      />
+        <result property="updateTime"    column="update_time"    />
+        <result property="categoryName"    column="category_name"     />
+        <result property="schoolName"      column="school_name"       />
+        <result property="schoolShortName" column="school_short_name" />
+        <result property="sellerName"      column="seller_name"       />
+    </resultMap>
+
+    <sql id="selectCtProductVoJoin">
+        select p.product_id, p.title, p.category_id, p.seller_id, p.seller_type, p.price, p.original_price, p.stock,
+               p.condition_code, p.school_id, p.location, p.cover_url, p.tag, p.description, p.status, p.audit_remark,
+               p.view_count, p.favorite_count, p.del_flag, p.create_by, p.create_time, p.update_by, p.update_time,
+               c.category_name as category_name,
+               s.school_name   as school_name,
+               s.short_name    as school_short_name,
+               u.nick_name     as seller_name
+        from ct_product p
+        left join ct_category c on c.category_id = p.category_id
+        left join ct_school   s on s.school_id  = p.school_id
+        left join sys_user    u on u.user_id    = p.seller_id
+    </sql>
+
+    <select id="selectCtProductVoList" parameterType="com.ruoyi.campus.domain.vo.CtProductVo" resultMap="CtProductVoResult">
+        <include refid="selectCtProductVoJoin"/>
+        <where>
+            p.del_flag = '0'
+            <if test="status != null and status != ''">AND p.status = #{status}</if>
+            <if test="keyword != null and keyword != ''">AND p.title like concat('%', #{keyword}, '%')</if>
+            <if test="categoryId != null">AND p.category_id = #{categoryId}</if>
+            <if test="sellerId != null">AND p.seller_id = #{sellerId}</if>
+            <if test="sellerType != null and sellerType != ''">AND p.seller_type = #{sellerType}</if>
+            <if test="condition != null and condition != ''">AND p.condition_code = #{condition}</if>
+            <if test="conditionCode != null and conditionCode != ''">AND p.condition_code = #{conditionCode}</if>
+            <if test="school != null and school != ''">AND (s.school_name = #{school} or s.short_name = #{school})</if>
+            <if test="tag != null and tag != ''">AND p.tag = #{tag}</if>
+            <if test="params.minPrice != null">AND p.price &gt;= #{params.minPrice}</if>
+            <if test="params.maxPrice != null">AND p.price &lt;= #{params.maxPrice}</if>
+        </where>
+        <choose>
+            <when test="sort == 'priceAsc'">order by p.price asc</when>
+            <when test="sort == 'priceDesc'">order by p.price desc</when>
+            <when test="sort == 'newest'">order by p.create_time desc</when>
+            <otherwise>order by p.create_time desc</otherwise>
+        </choose>
+    </select>
+
+    <select id="selectCtProductVoById" parameterType="Long" resultMap="CtProductVoResult">
+        <include refid="selectCtProductVoJoin"/>
+        where p.product_id = #{productId}
+    </select>
+
+    <!--
+      Atomic stock deduction (prevents overselling under concurrency).
+      CRITICAL: MySQL evaluates SET assignments from left to right, so a later
+      expression reads the already-updated row. The sold-out check must therefore
+      come FIRST, while `stock` still holds the original value.
+      Writing `stock = stock - qty` before the status check would evaluate
+      `stock - qty` against the NEW stock and wrongly mark a product as sold out
+      while 1 unit is still left.
+    -->
+    <update id="deductStock">
+        update ct_product
+        set status = case when stock - #{qty} &lt;= 0 then '4' else status end,
+            stock = stock - #{qty},
+            update_time = sysdate()
+        where product_id = #{productId}
+          and del_flag = '0'
+          and status = '1'
+          and stock &gt;= #{qty}
+    </update>
+
+    <!-- Atomically give the stock back; a sold-out product is put back on sale. -->
+    <update id="restoreStock">
+        update ct_product
+        set stock = stock + #{qty},
+            status = case when status = '4' then '1' else status end,
+            update_time = sysdate()
+        where product_id = #{productId}
+          and del_flag = '0'
+    </update>
+</mapper>

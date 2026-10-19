@@ -1,0 +1,340 @@
+# 校易淘 · 校园二手交易系统
+
+前后端已完整打通的校园闲置交易系统演示版：**Vue 3 前端 + 若依（RuoYi）Spring Boot 后端 + MySQL + Redis**。
+
+买家与卖家双端闭环均已实现并经过端到端验证。
+
+---
+
+## 一、功能总览
+
+| 角色 | 已实现能力 |
+| --- | --- |
+| 买家 | 手机号注册登录 → 浏览 / 搜索 / 筛选 / 排序商品 → 收藏 → 加入购物车 → 下单（多卖家自动拆单 + 幂等）→ 沙箱支付 → 确认收货 → 申请退款 |
+| 卖家 | 发布商品（含图片上传）→ 改价 / 上架 / 下架 / 删除 → 处理订单发货 → 处理退款（同意 / 拒绝 / 确认到账） |
+| 平台 | 商品审核状态机、订单状态机、退款状态机、真实库存扣减与回滚、越权防护、逻辑删除 |
+
+### 订单状态机
+
+```
+待付款(0) ──支付成功──> 待发货(1) ──卖家发货──> 待收货(2) ──确认收货──> 已完成(3)
+   │  └──取消──> 已取消(4)（恢复库存，商品重新上架）
+   └──申请退款──> 退款中(5) ──完成退款──> 已退款(6)（恢复库存）
+                    └──卖家拒绝──> 回滚为申请前的状态
+```
+
+### 退款单状态机
+
+```
+待审核(0) ──卖家同意──> 已同意(1) ──确认到账──> 已退款完成(3)
+   └──卖家拒绝──> 已拒绝(2)（订单回滚为申请前状态）
+```
+
+---
+
+## 二、目录结构
+
+```
+校园二手/
+├── README.md                         # 本文件
+├── docs/
+│   ├── 接口文档.md                   # 全部 /api/v1 接口
+│   └── 数据库设计说明.md              # 表结构与业务规则
+├── RuoYi-Vue-master/RuoYi-Vue-master/ # 后端
+│   ├── ruoyi-campus/                 # 【本次新增】校园业务模块
+│   └── sql/                          # 数据库脚本
+│       ├── ry_20260417.sql           # 若依基础表（若依自带）
+│       ├── quartz.sql                # 定时任务表（若依自带）
+│       ├── campus_trade.sql          # ★ 业务表 + 字典（本次新增）
+│       ├── campus_menu.sql           # ★ 菜单与权限（本次新增）
+│       └── campus_seed_products.sql  # ★ 演示数据（本次新增）
+└── 校易淘前端-后端交接-2026-10-19T01-05-57-755Z/   # 前端
+    ├── src/
+    │   ├── api/                      # HTTP 层与接口封装
+    │   ├── composables/useMarketplace.js  # 业务状态与逻辑
+    │   ├── components/               # 图标、商品插画
+    │   └── data/products.js          # 仅保留学校选项
+    └── vite.config.js                # /api 与 /profile 代理
+```
+
+---
+
+## 三、本地启动步骤
+
+### 0. 环境要求
+
+| 组件 | 版本 | 说明 |
+| --- | --- | --- |
+| JDK | 17 及以上 | 实测 JDK 27 编译通过（工程 `source/target=17`） |
+| Maven | 3.9.x | 用于构建后端 |
+| Node.js | 20 及以上 | 实测 v24.21.0 / npm 11.19.0 |
+| MySQL | 8.x 及以上 | 实测 26.7 |
+| Redis | 5.x 及以上 | 实测 7.4.3 |
+
+### 1. 初始化数据库
+
+确保 MySQL 已启动（Windows 服务名 `MySQL267`，端口 3306，root 密码见 `application-druid.yml`）。
+
+```powershell
+# 创建库（若已存在可跳过）
+mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS shop DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
+
+# 按顺序导入（工作目录切到 sql 目录，避免中文路径问题）
+cd RuoYi-Vue-master\RuoYi-Vue-master\sql
+mysql -uroot -p --default-character-set=utf8mb4 shop < ry_20260417.sql
+mysql -uroot -p --default-character-set=utf8mb4 shop < quartz.sql
+mysql -uroot -p --default-character-set=utf8mb4 shop < campus_trade.sql
+mysql -uroot -p --default-character-set=utf8mb4 shop < campus_menu.sql
+mysql -uroot -p --default-character-set=utf8mb4 shop < campus_seed_products.sql
+```
+
+导入后应包含 **8 条在售商品**、5 个类目、2 所学校、66 条校园菜单。
+
+### 2. 启动 Redis
+
+确保 Redis 服务运行（Windows 服务名 `Redis`，端口 6379，默认无密码）。
+
+### 3. 启动后端
+
+```powershell
+$env:JAVA_HOME = "C:\jdk-17"   # 按实际路径修改
+cd RuoYi-Vue-master\RuoYi-Vue-master
+mvn -pl ruoyi-admin -am -DskipTests clean package
+java -jar ruoyi-admin\target\ruoyi-admin.jar
+```
+
+启动成功日志：`Started RuoYiApplication in x seconds`，端口 **8080**。
+
+访问地址：
+- 后台管理：http://localhost:8080
+- Druid 监控：http://localhost:8080/druid （ruoyi / 123456）
+- 接口文档：http://localhost:8080/swagger-ui.html
+
+### 4. 启动前端
+
+```powershell
+cd 校易淘前端-后端交接-2026-10-19T01-05-57-755Z
+npm ci
+npm run dev
+```
+
+访问 **http://127.0.0.1:5174** 。开发服务器已把 `/api` 与 `/profile` 代理到 `http://127.0.0.1:8080`。
+
+如需改后端地址：复制 `.env.example` 为 `.env.local`，修改 `DEV_API_TARGET`，**重启**开发服务器。
+
+---
+
+## 四、测试账号
+
+所有测试账号密码均为 **`admin123`**。
+
+| 手机号 | 昵称 | 身份 | 说明 |
+| --- | --- | --- | --- |
+| 15888888888 | 若依 | 管理员 | 若依超级管理员，可用后台管理菜单 |
+| 13800001001 | 小林同学 | 卖家 | 发布商品 1、5 |
+| 13800001002 | 阿泽 | 卖家 | 发布商品 2、8 |
+| 13800001003 | 一颗小橙 | 卖家 | 发布商品 3、6 |
+| 13800001004 | 骑车去看海 | 卖家 | 发布商品 4、7 |
+
+> 登录方式：**手机号 + 密码**（`POST /api/v1/auth/login`）。
+> 注意：`13800001001` 等演示卖家与商品一一对应，测试「卖家中心」时用它登录。
+
+### 推荐体验路径
+
+1. 用 `15888888888 / admin123` 登录 → 逛商品 → 加入购物车 → 下单（选不同卖家可看到自动拆单）→ 去支付 → 确认收货。
+2. 用 `13800001001 / admin123` 登录 → 卖家中心 → 我卖出的（发货）→ 退款处理。
+3. 买家对已支付订单点「申请退款」，再用卖家账号到退款处理里同意 / 拒绝。
+4. 发布商品时可选上传图片，图片可通过 `/profile/upload/...` 访问。
+
+---
+
+## 五、自动化测试
+
+后端已建立集成测试体系，使用**独立的 `shop_test` 库**，不会污染开发库。
+
+```powershell
+# 1. 一键创建/重建测试库（含建表 + 演示数据 + 测试数据）
+.\scripts\setup-test-db.ps1
+
+# 2. 运行全部测试
+mvn -pl ruoyi-admin -am test
+
+# 只跑某个测试类
+mvn -pl ruoyi-admin -am test "-Dtest=StockConcurrencyTest"
+```
+
+### 现有用例（9 个，全部通过）
+
+| 测试类 | 用例 | 验证内容 |
+| --- | --- | --- |
+| `StockConcurrencyTest` | 库存 1、20 买家并发 | 只能成功 1 单，库存归零并自动下架 |
+| `StockConcurrencyTest` | 库存 10、20 买家并发 | 恰好成功 10 单，无丢失更新 |
+| `IdempotencyConcurrencyTest` | 同一幂等键并发 10 次 | 只产生 1 笔订单、库存只扣 1 次 |
+| `IdempotencyConcurrencyTest` | 顺序重复提交 | 返回原批次，不新增订单、不重复扣库存 |
+| `OrderLifecycleTest` | 下单→支付→发货→收货 | 状态机流转 + 支付幂等 |
+| `OrderLifecycleTest` | 取消待付款订单 | 回滚库存、商品重新上架 |
+| `OrderLifecycleTest` | 退款被拒绝 | 订单回滚到申请前状态 |
+| `OrderLifecycleTest` | 退款完成 | 订单转已退款、库存回滚、重新上架 |
+| `OrderLifecycleTest` | 越权防护 | 买家不能发货、他人订单不可见 |
+
+### 关键正确性设计
+
+**库存扣减是单条原子 SQL**，不使用「先查再改写」：
+
+```sql
+update ct_product
+set status = case when stock - #{qty} <= 0 then '4' else status end,
+    stock  = stock - #{qty}
+where product_id = #{id} and del_flag = '0' and status = '1' and stock >= #{qty}
+```
+
+> 注意：`status` 必须写在 `stock` **前面**。MySQL 同一 UPDATE 内 SET 赋值从左到右求值，靠后的表达式读到的是已赋新值的行；写反会导致「还剩 1 件也被误判为售罄」。
+
+**下单幂等由数据库保证**：先往 `ct_idempotency` 插入幂等键（唯一索引 `uk_ct_idem_key`），只有插入成功的请求能进入下单流程，其余请求要么重放原批次，要么被明确拒绝。另有 `ct_order` 上的 `(group_no, seller_id)` 唯一索引做兜底。
+
+---
+
+## 六、数据库版本管理（Flyway）
+
+所有**后续**的表结构变更都放在 `ruoyi-admin/src/main/resources/db/migration/`，由应用启动时自动执行，不再手写 SQL 导入。
+
+```
+db/migration/
+├── V1__campus_p0_integrity.sql   # 幂等表 + group_no 扩容 + 防重复建单唯一索引
+└── V2__order_list_index.sql      # 订单查询索引
+```
+
+| 迁移 | 版本 | 说明 |
+| --- | --- | --- |
+| `legacy schema imported from sql/*.sql` | BASELINE 1 | 存量库基线（由 `sql/campus_*.sql` 导入的历史结构） |
+| `V1 campus_p0_integrity` | 1 | 幂等表等 P0 变更（已包含在基线中，不重复执行） |
+| `V2 order_list_index` | 2 | 订单列表查询索引 |
+
+```powershell
+# 新增迁移：建 V3__xxx.sql 即可，启动时自动应用并记录到 flyway_schema_history
+mvn -pl ruoyi-admin -am -DskipTests package
+java -jar ruoyi-admin\target\ruoyi-admin.jar
+```
+
+> 迁移由 `DatabaseMigration`（`ApplicationRunner`）显式执行，配置集中在代码里而不是 `application.yml`——避免出现"yml 配了却没生效"的隐患。
+> 存量库已由 `sql/` 脚本导入，因此设了 `baseline-version: 1`，只登记基线、不重复执行 V1。
+
+---
+
+## 七、接口参数校验
+
+请求体的合法性由 **Bean Validation** 在 Controller 层拦截（`@Valid`），不再散落在 Service 里手写 `if-else`。
+
+| DTO | 校验内容 |
+| --- | --- |
+| `CtLoginBody` | 手机号格式、密码非空 |
+| `CtProductCreateBody` | 标题 4~128 字、类目必填、价格 0.01~99999、库存 0~9999、成色枚举、图片最多 6 张 |
+| `CtOrderCreateBody` | 商品必选、收货人 ≤20、手机号 11 位、地址 ≤200、配送方式枚举、幂等键 ≤64 |
+| `CtOrderCreateBody` 跨字段 | 传了 `addressId` 则以地址簿为准，否则收货人/电话/地址三项必填（`@AssertTrue`） |
+
+校验失败统一返回我们的响应结构，**多条违规会聚合展示**而不是只报第一条：
+
+```json
+{ "code": 400, "message": "请填写收货人、联系电话与收货地址；请选择要结算的商品", "data": null }
+```
+
+> `ApiExceptionHandler` 以 `HIGHEST_PRECEDENCE` 优先于若依自带的全局异常处理，保证 `/api/v1` 始终是 `{code, message, data}` 一种结构。
+
+---
+## 八、常见问题
+
+**Q：Maven 报 `Error assembling JAR` / `Failed to delete ... target`**
+文件被占用（通常是 IDE 或残留进程锁定）。结束 `java` 进程后重试 `mvn clean package` 即可。
+
+**Q：Java 源码报「编码 UTF-8 的不可映射字符」**
+若使用某些编辑器/工具保存中文文件，可能写成 GBK。工程 `sourceEncoding=UTF-8`，需把相关 `.java` / `.xml` 转为 UTF-8（无 BOM）再编译。
+
+**Q：`npm ci` 报 ECONNRESET**
+网络问题。换镜像：`npm ci --registry=https://registry.npmmirror.com`。
+
+**Q：图片显示 404**
+图片存放在 `D:/ruoyi/uploadPath/upload/...`（由 `application.yml` 的 `ruoyi.profile` 决定）。开发环境请确认 `/profile` 已在 Vite 代理中配置。
+
+**Q：修改配置后不生效**
+`application*.yml` 改动需重启 jar；`.env.local` 改动需重启 Vite。
+
+**Q：接口返回 HTTP 200 但 body 里 code 是 401**
+若依对未认证请求返回 HTTP 200 + JSON `code:401`。前端已按 body 的 `code` 判断。令牌过期时该 401 由 Spring Security 层返回（字段为 `msg`），登录失败则由我们的接口返回（字段为 `message`）。
+
+---
+
+## 九、支付网关抽象
+
+支付是**策略模式**实现的，业务层只依赖 `PaymentGateway` 接口，不感知具体渠道。
+
+```
+com.ruoyi.campus.payment
+├── PaymentGateway          抽象：prepay / confirm / supportsManualConfirm / verifyCallback
+├── PaymentGatewayRegistry  按 pay_method 分发，所有 Spring Bean 实现自动注册
+├── SandboxPaymentGateway   code=0 沙箱，确认即成功
+├── MockPaymentGateway      code=9 模拟网关：金额 ≥ 500 元时返回失败
+└── PaymentCallbackSecret   回调签名校验（SHA-256），密钥只从环境注入
+```
+
+| 场景 | 路径 |
+| --- | --- |
+| 演示 / 自动化测试 | `POST /api/v1/pay/{payNo}/confirm`（主动确认） |
+| 真实支付网关 | `POST /api/v1/pay/{payNo}/notify?sign=...`（异步回调，**必须验签**） |
+
+> 新增支付渠道 = 新增一个 `implements PaymentGateway` 的 `@Component`，**不需要改动订单、支付单等任何业务代码**。
+> `supportsManualConfirm()` 返回 `false` 的实现（如真实网关）会拒绝主动确认，强制走回调路径。
+
+支付回调接口对外暴露且无需登录，因此**必须校验签名**，否则任何人都能伪造「支付成功」把订单刷成已付款——这一点有专门的测试用例守着。
+
+---
+
+## 十、容器化启动（Docker Compose）
+
+```bash
+cp .env.example .env      # 按需改端口与密码
+docker compose up -d --build
+```
+
+| 服务 | 端口 | 说明 |
+| --- | --- | --- |
+| frontend | 5174 | Nginx 托管前端静态资源，`/api` 与 `/profile` 反代到 backend |
+| backend | 8080 | 多阶段构建、非 root 运行、含健康检查 |
+| mysql | 3307 | 首次启动自动按正确顺序导入 `sql/` 下的建表与演示数据 |
+| redis | 6380 | 持久化到具名卷 |
+
+细节：
+
+- **Dockerfile 分层**：先只复制各模块 `pom.xml` 预热依赖缓存，改代码时不必重下依赖
+- **构建上下文互不干扰**：前后端各自独立上下文，互不 `COPY` 对方的文件
+- **SQL 只保留一份**：`docker/mysql-init/00_bootstrap.sql` 用 `source` 显式指定执行顺序，避开 MySQL 镜像「按文件名字典序执行」的坑
+- **密钥不落镜像**：`CAMPUS_PAY_SECRET` 只从环境变量注入
+
+> ⚠ 本机未安装 Docker，以上配置**尚未实机验证过**，仅完成了两件事：用 YAML 解析器校验语法、逐条校验 compose 引用的路径与 `source` 的 SQL 文件均真实存在。上机后请先跑一次 `docker compose config` 与 `docker compose up`。
+
+---
+
+## 十一、持续集成（CI）
+
+`.github/workflows/ci.yml` 在 push / PR 时自动执行：
+
+| Job | 内容 |
+| --- | --- |
+| backend | JDK 17 + MySQL 8.4 + Redis 服务容器 → 编译 → 建 `shop_test` → 跑 14 个测试 → 上传 surefire 报告 → 构建后端镜像 |
+| frontend | Node 20 → `npm ci` → 跑单测 → 构建 → 构建前端镜像 |
+
+任一步失败都会阻止合并；同一分支的新提交会自动取消进行中的旧任务。
+
+> ⚠ **当前工作区还不是 git 仓库**，CI 只有在推送到 GitHub 后才会生效。建议先 `git init` 并纳入版本管理（`.env`、`node_modules`、`target` 必须进 `.gitignore`）。
+
+---
+## 十二、尚未实现（诚实说明）
+
+- **真实支付**：使用沙箱支付（`POST /api/v1/pay/{payNo}/confirm` 直接置为成功）。接入真实网关需替换为异步回调校验。
+- **配送费**：暂恒为 0，未区分自提 / 配送计费。
+- **收货地址管理**：无 `/api/v1/addresses`，结算时直接提交收货人/电话/地址，由后端做快照。
+- **收藏**：仍为前端本地存储，未服务端化。
+- **商品审核**：新发布商品直接上架（`status=1`），若需审核改为 `0` 并在后台加审核动作。
+- **部分退款 / 售后**：仅支持全额退款；已完成订单不支持售后。
+- **登录态**：令牌仅存于内存，刷新页面需重新登录（无 refreshToken）。
+- **Docker 未实机验证**：本机无 Docker，容器化与 CI 仅完成静态校验。
+- **无 Git 版本管理**：工作区尚未 git init，CI 暂不生效。

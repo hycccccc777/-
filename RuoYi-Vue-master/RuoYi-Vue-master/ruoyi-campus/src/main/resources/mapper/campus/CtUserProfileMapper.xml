@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.campus.mapper.CtUserProfileMapper">
+
+    <resultMap type="CtUserProfile" id="CtUserProfileResult">
+        <id     property="profileId"    column="profile_id"    />
+        <result property="userId"       column="user_id"       />
+        <result property="realName"     column="real_name"     />
+        <result property="studentNo"    column="student_no"    />
+        <result property="schoolId"     column="school_id"     />
+        <result property="verifyStatus" column="verify_status" />
+        <result property="verifyRemark" column="verify_remark" />
+        <result property="verifyTime"   column="verify_time"   />
+        <result property="contactPhone" column="contact_phone" />
+        <result property="createBy"     column="create_by"     />
+        <result property="createTime"   column="create_time"   />
+        <result property="updateBy"     column="update_by"     />
+        <result property="updateTime"   column="update_time"   />
+    </resultMap>
+
+    <sql id="selectCtUserProfileVo">
+        select profile_id, user_id, real_name, student_no, school_id, verify_status, verify_remark, verify_time, contact_phone, create_by, create_time, update_by, update_time
+        from ct_user_profile
+    </sql>
+
+    <select id="selectCtUserProfileList" parameterType="CtUserProfile" resultMap="CtUserProfileResult">
+        <include refid="selectCtUserProfileVo"/>
+        <where>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="realName != null and realName != ''">AND real_name like concat('%', #{realName}, '%')</if>
+            <if test="studentNo != null and studentNo != ''">AND student_no like concat('%', #{studentNo}, '%')</if>
+            <if test="schoolId != null">AND school_id = #{schoolId}</if>
+            <if test="verifyStatus != null and verifyStatus != ''">AND verify_status = #{verifyStatus}</if>
+        </where>
+    </select>
+
+    <select id="selectCtUserProfileById" parameterType="Long" resultMap="CtUserProfileResult">
+        <include refid="selectCtUserProfileVo"/>
+        where profile_id = #{profileId}
+    </select>
+
+    <select id="selectCtUserProfileByUserId" parameterType="Long" resultMap="CtUserProfileResult">
+        <include refid="selectCtUserProfileVo"/>
+        where user_id = #{userId} limit 1
+    </select>
+
+    <insert id="insertCtUserProfile" parameterType="CtUserProfile" useGeneratedKeys="true" keyProperty="profileId">
+        insert into ct_user_profile
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="realName != null">real_name,</if>
+            <if test="studentNo != null">student_no,</if>
+            <if test="schoolId != null">school_id,</if>
+            <if test="verifyStatus != null">verify_status,</if>
+            <if test="verifyRemark != null">verify_remark,</if>
+            <if test="verifyTime != null">verify_time,</if>
+            <if test="contactPhone != null">contact_phone,</if>
+            <if test="createBy != null">create_by,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="realName != null">#{realName},</if>
+            <if test="studentNo != null">#{studentNo},</if>
+            <if test="schoolId != null">#{schoolId},</if>
+            <if test="verifyStatus != null">#{verifyStatus},</if>
+            <if test="verifyRemark != null">#{verifyRemark},</if>
+            <if test="verifyTime != null">#{verifyTime},</if>
+            <if test="contactPhone != null">#{contactPhone},</if>
+            <if test="createBy != null">#{createBy},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateCtUserProfile" parameterType="CtUserProfile">
+        update ct_user_profile
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="realName != null">real_name = #{realName},</if>
+            <if test="studentNo != null">student_no = #{studentNo},</if>
+            <if test="schoolId != null">school_id = #{schoolId},</if>
+            <if test="verifyStatus != null">verify_status = #{verifyStatus},</if>
+            <if test="verifyRemark != null">verify_remark = #{verifyRemark},</if>
+            <if test="verifyTime != null">verify_time = #{verifyTime},</if>
+            <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </trim>
+        where profile_id = #{profileId}
+    </update>
+
+    <delete id="deleteCtUserProfileById" parameterType="Long">
+        delete from ct_user_profile where profile_id = #{profileId}
+    </delete>
+
+    <delete id="deleteCtUserProfileByIds" parameterType="Long">
+        delete from ct_user_profile where profile_id in
+        <foreach collection="array" item="profileId" open="(" separator="," close=")">
+            #{profileId}
+        </foreach>
+    </delete>
+
+</mapper>

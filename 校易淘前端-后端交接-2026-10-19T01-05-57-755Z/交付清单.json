@@ -1,0 +1,141 @@
+{
+  "createdAt": "2026-10-19T01:05:57.907Z",
+  "description": "前端源码与接口准备；不含后端、依赖、密钥和真实用户数据",
+  "files": [
+    {
+      "path": ".env.example",
+      "bytes": 342,
+      "sha256": "2b4ac2d2eda08e5840b4c322bbda0dbd01b7dee376c437329b9f50afdf83f6ab"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 72,
+      "sha256": "7b71697f1e8e6fee8e201c40573170cfc2578f7690ff7050736d02fb8b8f7b9d"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3619,
+      "sha256": "1ad38b4be8b323943017f8737dfa1ed683c269feb3314b1aceb38025bd7097a5"
+    },
+    {
+      "path": "deploy/nginx.conf.example",
+      "bytes": 743,
+      "sha256": "2ea3ee979a3daeeb3a9c7d630697aac5e180eb1735e874587668962287f7f3b4"
+    },
+    {
+      "path": "docs/后端接收指南.md",
+      "bytes": 2520,
+      "sha256": "50ed2bd73c5ac2884b17e735a4d4eb950beaddf29e77dcf70ea6ce4f54ce1b17"
+    },
+    {
+      "path": "docs/接口对接说明.md",
+      "bytes": 7370,
+      "sha256": "de42f846c383190406c1e38e0c2d043383ea9b230714b1e6f3a22f9bcdea3aed"
+    },
+    {
+      "path": "docs/文件作用说明.md",
+      "bytes": 9476,
+      "sha256": "390c0803c3bfcd3e20c6503fafa47da954ea983aaad643b2e4fd76b1d2da77cb"
+    },
+    {
+      "path": "docs/本次交接改动.md",
+      "bytes": 979,
+      "sha256": "91197469fdd0c18ad3ad865a728930acd683fb8a9435088a745e7d6dfa95b446"
+    },
+    {
+      "path": "docs/联调验收清单.md",
+      "bytes": 1439,
+      "sha256": "878287e9c6713ac32a1438cd4b5474f22560fd30b4113ff3110520d004f2ec6d"
+    },
+    {
+      "path": "index.html",
+      "bytes": 408,
+      "sha256": "bac52379655b3e8c12dd86301b96f65048787de4161935273f33d126cfadf491"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 53781,
+      "sha256": "7534708c549f0c7beb5b6ee40171452e3e9f6fef94ed7d791f1d531a60067182"
+    },
+    {
+      "path": "package.json",
+      "bytes": 496,
+      "sha256": "c04841ad77be14aee205b23f07b3c4e9b11dbd1cdd3a37455c31d15e0fc63c0a"
+    },
+    {
+      "path": "scripts/package.mjs",
+      "bytes": 3497,
+      "sha256": "d0df9fa989e85fb79e6e3559ba9eb02c288cf20a0f5471ba0e9388ad08898c88"
+    },
+    {
+      "path": "src/App.vue",
+      "bytes": 17630,
+      "sha256": "b9c2f8f57a7f2907f02c144f45c1841c8de59c2efc718474d44edc74d11db129"
+    },
+    {
+      "path": "src/api/http.js",
+      "bytes": 2935,
+      "sha256": "e1ecc2d769da62678ff25172015b5320cc9833e4a8ae846d65c0f07cfd17adfd"
+    },
+    {
+      "path": "src/api/index.js",
+      "bytes": 2228,
+      "sha256": "635283c096373bf7e128bda35af09b2143e91568bc473010f421cb27edb0adf8"
+    },
+    {
+      "path": "src/components/Icon.vue",
+      "bytes": 1616,
+      "sha256": "dfe0ed48b57d8da52383f0b9ca6b2c0cc3b8616b54859a31e7b9785cf68b676e"
+    },
+    {
+      "path": "src/components/ProductArt.vue",
+      "bytes": 4610,
+      "sha256": "51028ee14ab5375e887712d5721cea53131575124ff0a95604ba04a051b7549f"
+    },
+    {
+      "path": "src/composables/useMarketplace.js",
+      "bytes": 9683,
+      "sha256": "fdfc54868e5e0ae3c20cf4a79a1278dd98be870b4d48bc26a6115f084bd90ed4"
+    },
+    {
+      "path": "src/data/products.js",
+      "bytes": 3778,
+      "sha256": "11e619ac5aaee27d9d861ecea82e492b17703d1923b647294d81003c7dbf03f0"
+    },
+    {
+      "path": "src/main.js",
+      "bytes": 329,
+      "sha256": "b108a04b6dcd7391ac5e6b78eaa4f590e2340dca2934bf37963c440b46c2851b"
+    },
+    {
+      "path": "src/style.css",
+      "bytes": 24442,
+      "sha256": "612df0204eaa75fabdf0fb3a7f2a9b43c194eeaeb5e804fa5dba433a3c4d4e8f"
+    },
+    {
+      "path": "src/utils/storage.js",
+      "bytes": 331,
+      "sha256": "dcd0841675deaaf2564c928984b6097f4dc6da56f464249a640146a658e03b9f"
+    },
+    {
+      "path": "start.cmd",
+      "bytes": 314,
+      "sha256": "72c2a79732931f816d9b2a772793b89ae2332643cf56fd0a3c06889651670c23"
+    },
+    {
+      "path": "tests/http.test.js",
+      "bytes": 3631,
+      "sha256": "a6ab7174e91f6823d69922e77f26158c7e74f4350ff125286e0e50c792358c3c"
+    },
+    {
+      "path": "vite.config.js",
+      "bytes": 819,
+      "sha256": "4cf9d9229f90e0af5768283c57dfb0ebafd526a819ea394423c7fa362657d74e"
+    },
+    {
+      "path": "验证记录.md",
+      "bytes": 2485,
+      "sha256": "ec4469b4657083dc758c57e74f92eba32aacf1dd48f4911091f4763dd3f760d0"
+    }
+  ]
+}

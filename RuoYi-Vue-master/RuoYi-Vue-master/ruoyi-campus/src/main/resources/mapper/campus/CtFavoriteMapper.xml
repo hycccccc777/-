@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.campus.mapper.CtFavoriteMapper">
+
+    <resultMap type="CtFavorite" id="CtFavoriteResult">
+        <id     property="favoriteId" column="favorite_id" />
+        <result property="userId"     column="user_id"     />
+        <result property="productId"  column="product_id"  />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
+    <sql id="selectCtFavoriteVo">
+        select favorite_id, user_id, product_id, create_time
+        from ct_favorite
+    </sql>
+
+    <select id="selectCtFavoriteList" parameterType="CtFavorite" resultMap="CtFavoriteResult">
+        <include refid="selectCtFavoriteVo"/>
+        <where>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="productId != null">AND product_id = #{productId}</if>
+        </where>
+    </select>
+
+    <select id="selectCtFavoriteById" parameterType="Long" resultMap="CtFavoriteResult">
+        <include refid="selectCtFavoriteVo"/>
+        where favorite_id = #{favoriteId}
+    </select>
+
+    <select id="selectCtFavoriteByUserAndProduct" parameterType="CtFavorite" resultMap="CtFavoriteResult">
+        <include refid="selectCtFavoriteVo"/>
+        where user_id = #{userId} and product_id = #{productId} limit 1
+    </select>
+
+    <insert id="insertCtFavorite" parameterType="CtFavorite" useGeneratedKeys="true" keyProperty="favoriteId">
+        insert into ct_favorite (user_id, product_id, create_time)
+        values (#{userId}, #{productId}, sysdate())
+    </insert>
+
+    <delete id="deleteCtFavoriteById" parameterType="Long">
+        delete from ct_favorite where favorite_id = #{favoriteId}
+    </delete>
+
+    <delete id="deleteCtFavoriteByIds" parameterType="Long">
+        delete from ct_favorite where favorite_id in
+        <foreach collection="array" item="favoriteId" open="(" separator="," close=")">
+            #{favoriteId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteCtFavoriteByUserAndProduct" parameterType="CtFavorite">
+        delete from ct_favorite where user_id = #{userId} and product_id = #{productId}
+    </delete>
+
+</mapper>

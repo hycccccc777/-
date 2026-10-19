@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.campus.mapper.CtIdempotencyMapper">
+
+    <resultMap type="CtIdempotency" id="CtIdempotencyResult">
+        <id     property="idemId"      column="idem_id"      />
+        <result property="idemKey"     column="idem_key"     />
+        <result property="groupNo"     column="group_no"     />
+        <result property="status"      column="status"       />
+        <result property="createTime"  column="create_time"  />
+    </resultMap>
+
+    <insert id="insertCtIdempotency" parameterType="CtIdempotency" useGeneratedKeys="true" keyProperty="idemId">
+        insert into ct_idempotency (idem_key, group_no, status, create_time)
+        values (#{idemKey}, #{groupNo}, #{status}, sysdate())
+    </insert>
+
+    <select id="selectCtIdempotencyByKey" parameterType="String" resultMap="CtIdempotencyResult">
+        select idem_id, idem_key, group_no, status, create_time
+        from ct_idempotency
+        where idem_key = #{idemKey}
+        limit 1
+    </select>
+
+    <update id="updateCtIdempotency" parameterType="CtIdempotency">
+        update ct_idempotency
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="groupNo != null">group_no = #{groupNo},</if>
+            <if test="status != null">status = #{status},</if>
+        </trim>
+        where idem_key = #{idemKey}
+    </update>
+
+</mapper>

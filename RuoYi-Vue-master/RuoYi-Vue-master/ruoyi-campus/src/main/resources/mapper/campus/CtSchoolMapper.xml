@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.campus.mapper.CtSchoolMapper">
+
+    <resultMap type="CtSchool" id="CtSchoolResult">
+        <id     property="schoolId"   column="school_id"   />
+        <result property="schoolName" column="school_name" />
+        <result property="shortName"  column="short_name"  />
+        <result property="city"       column="city"        />
+        <result property="orderNum"   column="order_num"   />
+        <result property="status"     column="status"      />
+        <result property="delFlag"    column="del_flag"    />
+        <result property="createBy"   column="create_by"   />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy"   column="update_by"   />
+        <result property="updateTime" column="update_time" />
+        <result property="remark"     column="remark"      />
+    </resultMap>
+
+    <sql id="selectCtSchoolVo">
+        select school_id, school_name, short_name, city, order_num, status, del_flag, create_by, create_time, update_by, update_time, remark
+        from ct_school
+    </sql>
+
+    <select id="selectCtSchoolList" parameterType="CtSchool" resultMap="CtSchoolResult">
+        <include refid="selectCtSchoolVo"/>
+        <where>
+            del_flag = '0'
+            <if test="schoolName != null and schoolName != ''">AND school_name like concat('%', #{schoolName}, '%')</if>
+            <if test="shortName != null and shortName != ''">AND short_name like concat('%', #{shortName}, '%')</if>
+            <if test="city != null and city != ''">AND city like concat('%', #{city}, '%')</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+        order by order_num asc
+    </select>
+
+    <select id="selectCtSchoolById" parameterType="Long" resultMap="CtSchoolResult">
+        <include refid="selectCtSchoolVo"/>
+        where school_id = #{schoolId}
+    </select>
+
+    <insert id="insertCtSchool" parameterType="CtSchool" useGeneratedKeys="true" keyProperty="schoolId">
+        insert into ct_school
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="schoolName != null and schoolName != ''">school_name,</if>
+            <if test="shortName != null">short_name,</if>
+            <if test="city != null">city,</if>
+            <if test="orderNum != null">order_num,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="schoolName != null and schoolName != ''">#{schoolName},</if>
+            <if test="shortName != null">#{shortName},</if>
+            <if test="city != null">#{city},</if>
+            <if test="orderNum != null">#{orderNum},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateCtSchool" parameterType="CtSchool">
+        update ct_school
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="schoolName != null and schoolName != ''">school_name = #{schoolName},</if>
+            <if test="shortName != null">short_name = #{shortName},</if>
+            <if test="city != null">city = #{city},</if>
+            <if test="orderNum != null">order_num = #{orderNum},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </trim>
+        where school_id = #{schoolId}
+    </update>
+
+    <update id="deleteCtSchoolById" parameterType="Long">
+        update ct_school set del_flag = '2' where school_id = #{schoolId}
+    </update>
+
+    <update id="deleteCtSchoolByIds" parameterType="Long">
+        update ct_school set del_flag = '2' where school_id in
+        <foreach collection="array" item="schoolId" open="(" separator="," close=")">
+            #{schoolId}
+        </foreach>
+    </update>
+
+</mapper>

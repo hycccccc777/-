@@ -1,0 +1,25 @@
+# 统一换行策略，避免「在我机器上是 LF，在你机器上是 CRLF」这类噪音
+* text=auto eol=lf
+
+# Windows 脚本必须保持 CRLF，否则 cmd 下可能无法正常解析
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Shell 脚本与容器配置统一 LF
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# 二进制不做任何换行转换
+*.jar binary
+*.zip binary
+*.docx binary
+*.doc binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.campus.mapper.CtProductImageMapper">
+
+    <resultMap type="CtProductImage" id="CtProductImageResult">
+        <id     property="imageId"    column="image_id"    />
+        <result property="productId"  column="product_id"  />
+        <result property="imageUrl"   column="image_url"   />
+        <result property="orderNum"   column="order_num"   />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
+    <sql id="selectCtProductImageVo">
+        select image_id, product_id, image_url, order_num, create_time
+        from ct_product_image
+    </sql>
+
+    <select id="selectCtProductImageList" parameterType="CtProductImage" resultMap="CtProductImageResult">
+        <include refid="selectCtProductImageVo"/>
+        <where>
+            <if test="productId != null">AND product_id = #{productId}</if>
+        </where>
+        order by order_num asc
+    </select>
+
+    <select id="selectCtProductImageById" parameterType="Long" resultMap="CtProductImageResult">
+        <include refid="selectCtProductImageVo"/>
+        where image_id = #{imageId}
+    </select>
+
+    <insert id="insertCtProductImage" parameterType="CtProductImage" useGeneratedKeys="true" keyProperty="imageId">
+        insert into ct_product_image
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="productId != null">product_id,</if>
+            <if test="imageUrl != null and imageUrl != ''">image_url,</if>
+            <if test="orderNum != null">order_num,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="productId != null">#{productId},</if>
+            <if test="imageUrl != null and imageUrl != ''">#{imageUrl},</if>
+            <if test="orderNum != null">#{orderNum},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateCtProductImage" parameterType="CtProductImage">
+        update ct_product_image
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="imageUrl != null and imageUrl != ''">image_url = #{imageUrl},</if>
+            <if test="orderNum != null">order_num = #{orderNum},</if>
+        </trim>
+        where image_id = #{imageId}
+    </update>
+
+    <delete id="deleteCtProductImageById" parameterType="Long">
+        delete from ct_product_image where image_id = #{imageId}
+    </delete>
+
+    <delete id="deleteCtProductImageByIds" parameterType="Long">
+        delete from ct_product_image where image_id in
+        <foreach collection="array" item="imageId" open="(" separator="," close=")">
+            #{imageId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteCtProductImageByProductId" parameterType="Long">
+        delete from ct_product_image where product_id = #{productId}
+    </delete>
+
+</mapper>
