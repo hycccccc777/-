@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.ruoyi.campus.api.ApiException;
+import com.ruoyi.campus.auth.RefreshTokenService;
 import com.ruoyi.campus.domain.CtLoginBody;
 import com.ruoyi.campus.mapper.CtAuthMapper;
 import com.ruoyi.campus.service.ICtAuthService;
@@ -42,6 +43,9 @@ public class CtAuthServiceImpl implements ICtAuthService
 
     @Autowired
     private TokenService tokenService;
+
+    @Autowired
+    private RefreshTokenService refreshTokenService;
 
     /** 令牌有效期（分钟），与若依 token.expireTime 保持一致 */
     @Value("${token.expireTime}")
@@ -89,7 +93,36 @@ public class CtAuthServiceImpl implements ICtAuthService
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("token", token);
-        data.put("refreshToken", null);
+        data.put("refreshToken", refreshTokenService.issue(user.getUserId()));
+        data.put("expiresIn", expireTime * 60);
+        data.put("user", toUserMap(user));
+        return data;
+    }
+
+    @Override
+    public Map<String, Object> refresh(String refreshToken)
+    {
+        // 先消费（并作废）刷新令牌，再签发新令牌
+        Long userId = refreshTokenService.consume(refreshToken);
+
+        SysUser user = userService.selectUserById(userId);
+        if (user == null)
+        {
+            throw new ApiException(401, "用户不存在，请重新登录");
+        }
+        if (UserStatus.DELETED.getCode().equals(user.getDelFlag())
+                || UserStatus.DISABLE.getCode().equals(user.getStatus()))
+        {
+            // 账号在登录之后被停用/删除时，刷新同样必须拒绝
+            throw new ApiException(401, "账号不可用，请重新登录");
+        }
+
+        LoginUser loginUser = (LoginUser) userDetailsService.createLoginUser(user);
+        String token = tokenService.createToken(loginUser);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("token", token);
+        data.put("refreshToken", refreshTokenService.issue(userId));
         data.put("expiresIn", expireTime * 60);
         data.put("user", toUserMap(user));
         return data;

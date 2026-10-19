@@ -1,4 +1,17 @@
 # 项目相关配置
+# 校园二手交易系统自有配置：业务行为开关与凭据注入集中于此。
+# 与第三方库配置（如 token、druid）不同，campus.* 只影响本项目代码。
+campus:
+  # 支付回调签名密钥：生产/CI 必须用环境变量覆盖（见 .env.example）
+  payment:
+    notify-secret: ${CAMPUS_PAY_SECRET:change-me-in-production}
+  # 接口限流总开关：测试或压测时可整体关闭
+  ratelimit:
+    enabled: true
+  # 认证：刷新令牌有效期（天）
+  auth:
+    refresh-token-days: 7
+
 ruoyi:
   # 名称
   name: RuoYi

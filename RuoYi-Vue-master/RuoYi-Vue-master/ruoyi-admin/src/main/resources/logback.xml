@@ -7,7 +7,9 @@
      改为优先取环境变量 LOG_PATH，默认落到工作目录下的 logs。 -->
 <property name="log.path" value="${LOG_PATH:-logs}" />
     <!-- 日志输出格式 -->
-	<property name="log.pattern" value="%d{HH:mm:ss.SSS} [%thread] %-5level %logger{20} - [%method,%line] - %msg%n" />
+	<!-- %X{traceId} 输出 MDC 中的 traceId；
+         完整日期而非仅 HH:mm:ss，避免跨天排查日志时时间歧义 -->
+    <property name="log.pattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [trace=%X{traceId:-}] %logger{36} - [%method:%line] - %msg%n" />
 
 	<!-- 控制台输出 -->
 	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
@@ -94,4 +96,23 @@
     <logger name="sys-user" level="info">
         <appender-ref ref="sys-user"/>
     </logger>
+<!-- 结构化访问日志：每个 /api/v1 请求一行，便于机器采集与离线分析。
+	     与业务日志分文件，避免轮转时把两者挤掉。 -->
+	<appender name="access" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${log.path}/api-access.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${log.path}/api-access.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<maxHistory>30</maxHistory>
+		</rollingPolicy>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [trace=%X{traceId:-}] %msg%n</pattern>
+			<charset>UTF-8</charset>
+		</encoder>
+	</appender>
+
+	<logger name="API_ACCESS" level="INFO" additivity="false">
+		<appender-ref ref="access" />
+		<appender-ref ref="console" />
+	</logger>
+
 </configuration> 

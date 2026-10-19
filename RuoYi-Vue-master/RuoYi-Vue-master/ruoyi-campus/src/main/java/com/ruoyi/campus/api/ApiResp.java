@@ -2,9 +2,9 @@ package com.ruoyi.campus.api;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.ruoyi.campus.observability.TraceContext;
 
 /**
  * 面向 /api/v1 前端的统一响应体：{"code":200,"message":"success","data":{}}
@@ -35,7 +35,7 @@ public final class ApiResp
         body.put("message", message);
         body.put("data", data);
         return ResponseEntity.status(status)
-                .header("X-Trace-Id", UUID.randomUUID().toString())
+                .header(TraceContext.HEADER, TraceContext.get())
                 .body(body);
     }
 

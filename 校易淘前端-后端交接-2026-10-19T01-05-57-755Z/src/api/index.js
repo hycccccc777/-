@@ -1,14 +1,40 @@
 import { createHttpClient } from './http'
 
 let accessToken = null
+let refreshToken = null
+let authExpiredHandler = () => {}
+
 // 只供正式登录成功后设置，演示昵称不会生成或设置 Token。
 export function setAccessToken(token) { accessToken = token || null }
 export function clearAccessToken() { accessToken = null }
+
+/** 登录/刷新成功后可一次性写入两个令牌 */
+export function setTokens({ token, refreshToken: nextRefreshToken } = {}) {
+  accessToken = token || null
+  refreshToken = nextRefreshToken || null
+}
+
+export function clearTokens() {
+  accessToken = null
+  refreshToken = null
+}
+
+/** 由应用层注册：刷新失败时清状态并跳登录 */
+export function onAuthExpired(handler) {
+  authExpiredHandler = typeof handler === 'function' ? handler : () => {}
+}
 
 const request = createHttpClient({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   timeoutMs: Number(import.meta.env.VITE_API_TIMEOUT_MS || 10000),
   getToken: () => accessToken,
+  getRefreshToken: () => refreshToken,
+  onTokenRefreshed: data => {
+    // 后端每次刷新都会下发新的 refreshToken（一次性语义），必须一并更新，
+    // 否则第二次刷新会因旧令牌已作废而失败
+    setTokens(data)
+  },
+  onAuthExpired: () => authExpiredHandler(),
 })
 
 const segment = value => encodeURIComponent(String(value))

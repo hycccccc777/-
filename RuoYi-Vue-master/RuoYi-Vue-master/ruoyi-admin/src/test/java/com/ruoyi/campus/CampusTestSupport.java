@@ -24,6 +24,7 @@ import com.ruoyi.common.core.domain.model.LoginUser;
         "spring.datasource.druid.master.password=${CAMPUS_DB_PASSWORD:qazwsx@134567}",
         "spring.datasource.druid.maxActive=30",
         "spring.data.redis.database=4",
+        "campus.ratelimit.enabled=false",
         "logging.level.root=warn",
         "logging.level.com.ruoyi=warn"
 })
