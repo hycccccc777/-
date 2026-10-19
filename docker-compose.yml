@@ -69,8 +69,11 @@ services:
       # 支付回调签名密钥，只从环境注入，不写进代码或镜像
       CAMPUS_PAY_NOTIFY_SECRET: ${CAMPUS_PAY_SECRET:-change-me-in-production}
       RUYI_PROFILE: ${UPLOAD_DIR:-/app/uploadPath}
+      # 日志目录同样可移植，默认落到容器内 /app/logs
+      LOG_PATH: /app/logs
     volumes:
       - upload-data:/app/uploadPath
+      - backend-logs:/app/logs
     ports:
       - "${BACKEND_PORT:-8080}:8080"
 
@@ -87,6 +90,7 @@ services:
       - "${FRONTEND_PORT:-5174}:80"
 
 volumes:
+  backend-logs:
   mysql-data:
   redis-data:
   upload-data:

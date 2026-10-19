@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!-- 日志存放路径 -->
-	<property name="log.path" value="/home/ruoyi/logs" />
+	<!-- 日志目录必须可移植：原先硬编码 /home/ruoyi/logs，
+     在 Windows 上被解析成 C:\home\ruoyi\logs（碰巧能建），
+     在 CI/容器里 /home/ruoyi 不可写，Spring 启动直接失败。
+     改为优先取环境变量 LOG_PATH，默认落到工作目录下的 logs。 -->
+<property name="log.path" value="${LOG_PATH:-logs}" />
     <!-- 日志输出格式 -->
 	<property name="log.pattern" value="%d{HH:mm:ss.SSS} [%thread] %-5level %logger{20} - [%method,%line] - %msg%n" />
 
