@@ -34,6 +34,18 @@ jobs:
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ptest123456"
           --health-interval=10s --health-timeout=5s --health-retries=15
+
+      # RuoYi 强依赖 Redis：Spring 上下文启动时就要连，
+      # 缺了它会导致 @SpringBootTest 上下文加载失败、所有用例 error。
+      # 测试基类只覆盖了 database 索引，host/port 取 application.yml 的
+      # localhost:6379，因此这里必须映射到 runner 本机端口。
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s --health-timeout=5s --health-retries=10
     steps:
       - uses: actions/checkout@v5
 
