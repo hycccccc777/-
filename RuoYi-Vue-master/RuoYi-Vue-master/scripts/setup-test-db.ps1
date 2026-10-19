@@ -11,6 +11,10 @@ $ErrorActionPreference = "Stop"
 
 # Windows 的 $env:TEMP 在 Linux/macOS 上不存在，统一改用 .NET 的临时目录
 $tmpDir = [System.IO.Path]::GetTempPath()
+# 必须用 Join-Path 拼接：Linux 上 `\` 不是路径分隔符，
+# 直接拼 "$tmpDir\file" 会被当成根目录下的同名文件并 Permission denied
+$errFile = Join-Path $tmpDir "mysql_err.txt"
+$outFile = Join-Path $tmpDir "mysql_out.txt"
 if ($MysqlBin) {
     # 显式指定时兼容 Windows 的 mysql.exe 与类 Unix 的 mysql
     $mysql = @((Join-Path $MysqlBin 'mysql.exe'), (Join-Path $MysqlBin 'mysql')) |
@@ -36,11 +40,11 @@ function Invoke-Sql {
     param([string] $ArgString, [string] $InputFile, [string] $Label)
     $p = @{ FilePath = $mysql; ArgumentList = $ArgString
             NoNewWindow = $true; PassThru = $true; Wait = $true
-            RedirectStandardError = "$tmpDir\mysql_err.txt" }
+            RedirectStandardError = $errFile }
     if ($InputFile) { $p["RedirectStandardInput"] = $InputFile }
     $r = Start-Process @p
     if ($r.ExitCode -ne 0) {
-        $e = if (Test-Path "$tmpDir\mysql_err.txt") { Get-Content "$tmpDir\mysql_err.txt" -Raw } else { "" }
+        $e = if (Test-Path $errFile) { Get-Content $errFile -Raw } else { "" }
         throw "$Label failed (exit=$($r.ExitCode)) :: $e"
     }
 }
@@ -64,7 +68,7 @@ try {
 
     Write-Host "[4/4] verify"
     $sql = "select concat('buyers=',(select count(*) from sys_user where user_id between 2001 and 2020),' seller=',(select count(*) from sys_user where user_id=2100),' test_products=',(select count(*) from ct_product where product_id>=9001),' limit_stock=',(select stock from ct_product where product_id=9001));"
-    $out = "$tmpDir\mysql_out.txt"
+    $out = $outFile
     Start-Process -FilePath $mysql -ArgumentList "-u$User -p$Password --default-character-set=utf8mb4 -N -B $TestDb -e `"$sql`"" -NoNewWindow -PassThru -Wait -RedirectStandardOutput $out | Out-Null
     Write-Host ("      " + (Get-Content $out -Raw).Trim())
 }

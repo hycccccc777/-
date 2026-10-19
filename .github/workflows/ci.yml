@@ -1,8 +1,11 @@
 # =====================================================================
 # GitHub Actions —— 与 scripts/ci.ps1 共用同一份逻辑
 #
-# 这里刻意不重复写编译/测试步骤，而是直接调用仓库里的 ci.ps1：
+# 刻意不重复写编译/测试步骤，而是调用仓库里的 ci.ps1：
 # 本地跑的、CI 跑的是同一套流程，不会出现「本地全绿、CI 挂了」。
+#
+# 注意：路径一律相对「仓库根目录」写死。ci.ps1 会自己定位脚本所在位置，
+# 所以不要给 job 设 working-directory，否则相对路径会错位（踩过一次）。
 # =====================================================================
 name: CI
 
@@ -31,13 +34,10 @@ jobs:
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ptest123456"
           --health-interval=10s --health-timeout=5s --health-retries=15
-    defaults:
-      run:
-        working-directory: RuoYi-Vue-master/RuoYi-Vue-master
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -51,7 +51,7 @@ jobs:
         env:
           CAMPUS_DB_USERNAME: root
           CAMPUS_DB_PASSWORD: test123456
-        run: ./scripts/ci.ps1 -SkipFrontend -SkipDocker
+        run: ./RuoYi-Vue-master/RuoYi-Vue-master/scripts/ci.ps1 -SkipFrontend -SkipDocker
 
       - name: 上传测试报告
         if: always()
@@ -64,13 +64,10 @@ jobs:
   frontend:
     name: 前端构建与测试
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: 校易淘前端-后端交接-2026-10-19T01-05-57-755Z
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: npm
@@ -81,4 +78,8 @@ jobs:
         run: ./RuoYi-Vue-master/RuoYi-Vue-master/scripts/ci.ps1 -SkipBackend -SkipTests -SkipDocker
 
       - name: 构建前端镜像
-        run: docker build -t campus-frontend:${{ github.sha }} .
+        run: >
+          docker build
+          -f "校易淘前端-后端交接-2026-10-19T01-05-57-755Z/Dockerfile"
+          -t campus-frontend:${{ github.sha }}
+          "校易淘前端-后端交接-2026-10-19T01-05-57-755Z"
