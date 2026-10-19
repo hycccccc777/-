@@ -79,6 +79,24 @@ function Assert-LastExitCode {
     param([string] $What)
     if ($LASTEXITCODE -ne 0) { throw "$What 返回非零退出码 $LASTEXITCODE" }
 }
+function Show-TestFailureDiagnostics {
+    <# 测试失败时把真实异常打印到控制台，避免只看退出码还得回头翻日志 #>
+    param([string] $ReportsDir)
+
+    $reports = Get-ChildItem (Join-Path $ReportsDir '*.txt') -ErrorAction SilentlyContinue
+    foreach ($r in $reports) {
+        $content = Get-Content $r.FullName -Encoding UTF8
+        $summary = $content | Select-String -Pattern 'Tests run:' | Select-Object -First 1
+        if ($summary -and $summary.Line -match 'Failures: (\d+), Errors: (\d+)') {
+            if ([int]$Matches[1] -eq 0 -and [int]$Matches[2] -eq 0) { continue }
+            Write-Host ""
+            Write-Host ("  ---- " + $r.BaseName + " ----") -ForegroundColor Magenta
+            $body = $content | Select-Object -Skip 4 | Where-Object { $_.Trim() -ne '' }
+            $body | Select-Object -First 20 | ForEach-Object { Write-Host ("  | " + $_) }
+        }
+    }
+}
+
 
 function Resolve-Maven {
     # 找不到 Maven 时给出可执行的指引，而不是抛出「术语无法识别」这种无法定位的错
@@ -132,7 +150,11 @@ if (-not $SkipTests -and -not $SkipBackend) {
     # ---------- 3. 测试 ----------
     Invoke-Step '后端测试' {
         Push-Location $backendDir
-        try { & $mvn -B -pl ruoyi-admin -am test; Assert-LastExitCode 'mvn test' }
+        try {
+            & $mvn -B -pl ruoyi-admin -am test
+            if ($LASTEXITCODE -ne 0) { Show-TestFailureDiagnostics -ReportsDir (Join-Path (Join-Path $backendDir 'ruoyi-admin') 'target/surefire-reports') }
+            Assert-LastExitCode 'mvn test'
+        }
         finally { Pop-Location }
     }
 

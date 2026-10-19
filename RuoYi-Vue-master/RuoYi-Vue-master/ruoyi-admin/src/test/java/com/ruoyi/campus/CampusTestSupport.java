@@ -19,7 +19,7 @@ import com.ruoyi.common.core.domain.model.LoginUser;
  * 因此即使主配置里 spring.profiles.active=druid 也不会误连开发库 shop。
  */
 @SpringBootTest(properties = {
-        "spring.datasource.druid.master.url=jdbc:mysql://localhost:3306/shop_test?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8",
+        "spring.datasource.druid.master.url=jdbc:mysql://localhost:3306/shop_test?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=GMT%2B8",
         "spring.datasource.druid.master.username=root",
         "spring.datasource.druid.master.password=${CAMPUS_DB_PASSWORD:qazwsx@134567}",
         "spring.datasource.druid.maxActive=30",
