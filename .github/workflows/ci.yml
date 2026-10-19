@@ -84,6 +84,66 @@ jobs:
           path: RuoYi-Vue-master/RuoYi-Vue-master/ruoyi-admin/target/surefire-reports/
           if-no-files-found: ignore
 
+  # =====================================================================
+  # 容器编排验证
+  #
+  # 本机不一定装了 Docker，但 GitHub runner 自带 docker + compose，
+  # 所以把「compose 能不能整体跑起来」放到云端验证：
+  # 起了 → 打接口 → 查数据 → 收摊。
+  #
+  # 覆盖的是单测覆盖不到的部分：服务间网络、命名卷权限、
+  # MySQL 初始化脚本顺序、Nginx 反向代理。
+  # =====================================================================
+  compose:
+    name: 容器编排验证
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: 校验 compose 文件语法
+        run: docker compose config --quiet && echo "compose 语法正确"
+
+      - name: 构建并启动全部服务
+        run: docker compose up -d --build --wait --wait-timeout 600
+
+      - name: 展示服务状态
+        run: docker compose ps
+
+      - name: 冒烟测试（经前端 Nginx 反代访问后端）
+        run: |
+          set -e
+          for i in $(seq 1 60); do
+            if curl -fsS "http://localhost:5174/api/v1/products?pageSize=1" -o /tmp/resp.json; then
+              echo "服务就绪（第 $((i*5)) 秒）"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "等待超时"; docker compose logs --no-color | tail -120; exit 1
+            fi
+            sleep 5
+          done
+          echo "--- 接口响应（前 200 字节）---"
+          head -c 200 /tmp/resp.json; echo
+
+      - name: 校验 MySQL 初始化数据已导入
+        run: |
+          set -e
+          count=$(docker compose exec -T mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD:-qazwsx@134567}" -N -B -e "select count(*) from shop.ct_product;" 2>/dev/null)
+          echo "ct_product 行数 = $count"
+          if [ "$count" -lt 1 ]; then echo "初始化 SQL 未生效"; exit 1; fi
+
+      - name: 校验容器内非 root 用户可写卷（日志与上传目录）
+        run: |
+          set -e
+          docker compose exec -T backend sh -c 'touch /app/logs/_probe && touch /app/uploadPath/_probe && rm -f /app/logs/_probe /app/uploadPath/_probe && echo "卷可写 OK"'
+
+      - name: 收集日志
+        if: always()
+        run: docker compose logs --no-color | tail -150
+
+      - name: 收摊
+        if: always()
+        run: docker compose down -v --remove-orphans
   frontend:
     name: 前端构建与测试
     runs-on: ubuntu-latest

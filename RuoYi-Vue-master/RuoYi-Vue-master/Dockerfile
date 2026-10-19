@@ -37,7 +37,12 @@ RUN addgroup -S campus && adduser -S campus -G campus
 WORKDIR /app
 
 COPY --from=build /build/ruoyi-admin/target/ruoyi-admin.jar app.jar
-RUN chown -R campus:campus /app
+# 必须先建好这两个目录再授权：compose 会把 upload-data / backend-logs
+# 两个命名卷挂到它们上面，而空的命名卷会继承镜像里对应目录的属主。
+# 若镜像里没有这两个目录，Docker 会以 root 创建，容器内非 root 的
+# campus 用户就写不进去——上传图片与写日志都会 Permission denied。
+RUN mkdir -p /app/uploadPath /app/logs \
+ && chown -R campus:campus /app
 USER campus
 
 EXPOSE 8080
