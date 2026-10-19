@@ -369,7 +369,7 @@ docker compose up -d --build
 
 ---
 
-## 十二、持续集成（CI)
+## 十二、持续集成（GitHub Actions）
 
 `.github/workflows/ci.yml` 在 push / PR 时自动执行：
 
