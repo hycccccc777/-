@@ -17,6 +17,8 @@ import com.ruoyi.campus.api.ApiResp;
 import com.ruoyi.campus.domain.CtOrderCreateBody;
 import com.ruoyi.campus.service.ICtOrderService;
 import com.ruoyi.common.utils.SecurityUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * 面向 /api/v1 前端的订单接口（需登录）
@@ -25,6 +27,7 @@ import com.ruoyi.common.utils.SecurityUtils;
  */
 @RestController
 @RequestMapping("/api/v1")
+@Tag(name = "订单", description = "下单、查询、取消、收货与发货")
 public class ApiOrderController
 {
     @Autowired
@@ -34,6 +37,7 @@ public class ApiOrderController
      * 下单：按卖家拆单，支持幂等键（请求体 idempotencyKey 或 Idempotency-Key 头）
      */
     @PostMapping("/orders")
+    @Operation(summary = "下单", description = "创建订单并返回订单号；幂等键保证重复提交只建一单")
     public ResponseEntity<Map<String, Object>> create(@Valid @RequestBody(required = false) CtOrderCreateBody body,
             @RequestParam(value = "idempotencyKey", required = false) String keyParam)
     {
@@ -59,6 +63,7 @@ public class ApiOrderController
      * 我买到的订单
      */
     @GetMapping("/orders")
+    @Operation(summary = "我买到的订单")
     public ResponseEntity<Map<String, Object>> list()
     {
         return ApiResp.ok(orderService.listMyOrders(SecurityUtils.getUserId()));
@@ -68,6 +73,7 @@ public class ApiOrderController
      * 我卖出的订单
      */
     @GetMapping("/orders/sold")
+    @Operation(summary = "我卖出的订单")
     public ResponseEntity<Map<String, Object>> listSold()
     {
         return ApiResp.ok(orderService.listMySales(SecurityUtils.getUserId()));
@@ -77,6 +83,7 @@ public class ApiOrderController
      * 订单详情
      */
     @GetMapping("/orders/{orderNo}")
+    @Operation(summary = "订单详情")
     public ResponseEntity<Map<String, Object>> detail(@PathVariable("orderNo") String orderNo)
     {
         try
@@ -93,6 +100,7 @@ public class ApiOrderController
      * 取消订单
      */
     @PutMapping("/orders/{orderNo}/cancel")
+    @Operation(summary = "取消订单", description = "仅待付款可取消")
     public ResponseEntity<Map<String, Object>> cancel(@PathVariable("orderNo") String orderNo,
             @RequestParam(value = "reason", required = false) String reason)
     {
@@ -111,6 +119,7 @@ public class ApiOrderController
      * 确认收货
      */
     @PutMapping("/orders/{orderNo}/confirm")
+    @Operation(summary = "确认收货")
     public ResponseEntity<Map<String, Object>> confirm(@PathVariable("orderNo") String orderNo)
     {
         try
@@ -128,6 +137,7 @@ public class ApiOrderController
      * 卖家发货（仅待发货）
      */
     @PutMapping("/orders/{orderNo}/ship")
+    @Operation(summary = "卖家发货")
     public ResponseEntity<Map<String, Object>> ship(@PathVariable("orderNo") String orderNo)
     {
         try

@@ -16,6 +16,8 @@ import com.ruoyi.campus.api.ApiResp;
 import com.ruoyi.campus.domain.CtCartBody;
 import com.ruoyi.campus.service.ICtCartItemService;
 import com.ruoyi.common.utils.SecurityUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * 面向 /api/v1 前端的购物车接口（需登录）
@@ -24,6 +26,7 @@ import com.ruoyi.common.utils.SecurityUtils;
  */
 @RestController
 @RequestMapping("/api/v1")
+@Tag(name = "购物车", description = "加购、改数量、移除与列表")
 public class ApiCartController
 {
     @Autowired
@@ -33,6 +36,7 @@ public class ApiCartController
      * 我的购物车
      */
     @GetMapping("/cart")
+    @Operation(summary = "我的购物车")
     public ResponseEntity<Map<String, Object>> list()
     {
         return ApiResp.ok(cartService.listWithProduct(SecurityUtils.getUserId()));
@@ -42,6 +46,7 @@ public class ApiCartController
      * 加入购物车
      */
     @PostMapping("/cart/items")
+    @Operation(summary = "加购")
     public ResponseEntity<Map<String, Object>> add(@RequestBody CtCartBody body)
     {
         try
@@ -58,6 +63,7 @@ public class ApiCartController
      * 修改数量（id 为购物车条目ID）
      */
     @PutMapping("/cart/items/{cartItemId}")
+    @Operation(summary = "修改购物车数量")
     public ResponseEntity<Map<String, Object>> update(@PathVariable("cartItemId") Long cartItemId,
             @RequestBody CtCartBody body)
     {
@@ -75,6 +81,7 @@ public class ApiCartController
      * 移出购物车（id 为购物车条目ID）
      */
     @DeleteMapping("/cart/items/{cartItemId}")
+    @Operation(summary = "从购物车移除")
     public ResponseEntity<Map<String, Object>> remove(@PathVariable("cartItemId") Long cartItemId)
     {
         try

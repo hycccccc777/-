@@ -53,9 +53,9 @@ public class SwaggerConfig
     {
         return new Info()
             // 设置标题
-            .title("标题：若依管理系统_接口文档")
+            .title("校易淘 · 校园二手交易系统 接口文档")
             // 描述
-            .description("描述：用于管理集团旗下公司的人员信息,具体包括XXX,XXX模块...")
+            .description("两组接口：campus 分组为面向前端小程序的 /api/v1/**，default 分组为若依后台管理接口。")
             // 作者信息
             .contact(new Contact().name(ruoyiConfig.getName()))
             // 版本

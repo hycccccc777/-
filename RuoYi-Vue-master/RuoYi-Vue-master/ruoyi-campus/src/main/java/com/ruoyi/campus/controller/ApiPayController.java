@@ -16,6 +16,8 @@ import com.ruoyi.campus.domain.CtPayBody;
 import com.ruoyi.campus.service.ICtPaymentService;
 import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.common.utils.SecurityUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * 面向 /api/v1 前端的支付接口
@@ -27,6 +29,7 @@ import com.ruoyi.common.utils.SecurityUtils;
  */
 @RestController
 @RequestMapping("/api/v1")
+@Tag(name = "支付", description = "建单、查状态、确认与网关回调")
 public class ApiPayController
 {
     @Autowired
@@ -36,6 +39,7 @@ public class ApiPayController
      * 创建支付单
      */
     @PostMapping("/pay/create")
+    @Operation(summary = "创建支付单", description = "返回支付网关参数；余额模式直接扣减")
     public ResponseEntity<Map<String, Object>> create(@RequestBody CtPayBody body)
     {
         try
@@ -52,6 +56,7 @@ public class ApiPayController
      * 查询支付状态
      */
     @GetMapping("/pay/{payNo}/status")
+    @Operation(summary = "查询支付状态")
     public ResponseEntity<Map<String, Object>> status(@PathVariable("payNo") String payNo)
     {
         try
@@ -68,6 +73,7 @@ public class ApiPayController
      * 主动确认支付：仅沙箱/模拟网关支持，真实网关请走 /pay/notify
      */
     @PostMapping("/pay/{payNo}/confirm")
+    @Operation(summary = "标记支付成功", description = "演示环境用；生产走异步回调")
     public ResponseEntity<Map<String, Object>> confirm(@PathVariable("payNo") String payNo)
     {
         try
@@ -88,6 +94,7 @@ public class ApiPayController
      */
     @Anonymous
     @PostMapping("/pay/{payNo}/notify")
+    @Operation(summary = "支付网关回调", description = "匿名接口，验签通过才处理")
     public ResponseEntity<Map<String, Object>> notify(@PathVariable("payNo") String payNo,
             @RequestParam(value = "sign", required = false) String sign)
     {

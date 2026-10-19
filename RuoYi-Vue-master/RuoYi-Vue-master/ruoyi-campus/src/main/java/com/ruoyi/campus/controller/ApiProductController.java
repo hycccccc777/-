@@ -23,6 +23,8 @@ import com.ruoyi.campus.service.ICtProductService;
 import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * ???? /api/v1 ??????????
@@ -31,6 +33,7 @@ import com.ruoyi.common.utils.StringUtils;
  */
 @RestController
 @RequestMapping("/api/v1")
+@Tag(name = "商品", description = "列表、详情与发布")
 public class ApiProductController
 {
     @Autowired
@@ -41,6 +44,7 @@ public class ApiProductController
      */
     @Anonymous
     @GetMapping("/products")
+    @Operation(summary = "商品列表", description = "分页、关键词搜索、类目过滤")
     public ResponseEntity<Map<String, Object>> list(CtProductVo query,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "12") int size)
@@ -81,6 +85,7 @@ public class ApiProductController
      */
     @Anonymous
     @GetMapping("/products/{id}")
+    @Operation(summary = "商品详情")
     public ResponseEntity<Map<String, Object>> detail(@PathVariable("id") Long id)
     {
         CtProductVo vo = productService.selectCtProductVoById(id);
@@ -95,6 +100,7 @@ public class ApiProductController
      * ???????????????
      */
     @PostMapping("/products")
+    @Operation(summary = "发布商品", description = "需登录；图片先经 /upload 上传")
     public ResponseEntity<Map<String, Object>> create(@Valid @RequestBody CtProductCreateBody body)
     {
         // 说明：/api/v1/products 的 GET 用 @Anonymous 放行后，Spring Security 的路径匹配

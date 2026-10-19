@@ -11,6 +11,8 @@ import com.ruoyi.campus.api.ApiResp;
 import com.ruoyi.campus.domain.CtCategory;
 import com.ruoyi.campus.service.ICtCategoryService;
 import com.ruoyi.common.annotation.Anonymous;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * 面向 /api/v1 前端的类目接口（公开）
@@ -20,6 +22,7 @@ import com.ruoyi.common.annotation.Anonymous;
 @Anonymous
 @RestController
 @RequestMapping("/api/v1")
+@Tag(name = "类目", description = "启用中类目（公开）")
 public class ApiCategoryController
 {
     @Autowired
@@ -29,6 +32,7 @@ public class ApiCategoryController
      * 启用中的类目列表
      */
     @GetMapping("/categories")
+    @Operation(summary = "启用中的类目列表", description = "公开接口，无需登录")
     public ResponseEntity<Map<String, Object>> list()
     {
         CtCategory query = new CtCategory();

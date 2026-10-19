@@ -65,6 +65,17 @@ jobs:
           CAMPUS_DB_PASSWORD: test123456
         run: ./RuoYi-Vue-master/RuoYi-Vue-master/scripts/ci.ps1 -SkipFrontend -SkipDocker
 
+      - name: 校验接口契约无漂移
+        # 启动后端，把实时 OpenAPI 与仓库里的契约快照比对：
+        # 加了接口忘了更新快照、或改了路径没同步前端，都会在此失败。
+        working-directory: .
+        shell: pwsh
+        env:
+          CAMPUS_DB_USERNAME: root
+          CAMPUS_DB_PASSWORD: test123456
+          CAMPUS_DB_URL: jdbc:mysql://localhost:3306/shop_test?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=GMT%2B8
+        run: node scripts/export-api-contract.mjs
+
       - name: 上传测试报告
         if: always()
         uses: actions/upload-artifact@v4

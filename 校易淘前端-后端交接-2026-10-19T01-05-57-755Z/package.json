@@ -8,14 +8,18 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/*.test.js",
-    "handoff:pack": "node scripts/package.mjs"
+    "handoff:pack": "node scripts/package.mjs",
+    "gen:api": "openapi-typescript ../openapi/campus.openapi.json -o src/api/schema.d.ts",
+    "check:api": "node ../scripts/export-api-contract.mjs --check"
   },
   "dependencies": {
-    "vue": "3.4.38",
-    "element-plus": "2.5.6"
+    "element-plus": "2.5.6",
+    "vue": "3.4.38"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "5.2.4",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "^5.9.3",
     "vite": "6.4.1"
   }
 }

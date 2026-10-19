@@ -16,6 +16,8 @@ import com.ruoyi.campus.domain.CtRefreshBody;
 import com.ruoyi.campus.ratelimit.RateLimit;
 import com.ruoyi.campus.service.ICtAuthService;
 import com.ruoyi.common.annotation.Anonymous;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * 面向 /api/v1 前端的认证接口（手机号 + 密码）
@@ -24,6 +26,7 @@ import com.ruoyi.common.annotation.Anonymous;
  */
 @RestController
 @RequestMapping("/api/v1")
+@Tag(name = "认证", description = "手机号登录、刷新令牌、退出与当前用户")
 public class ApiAuthController
 {
     /**
@@ -44,6 +47,7 @@ public class ApiAuthController
     @Anonymous
     @RateLimit(permits = 10, seconds = 60, key = "login", scope = RateLimit.Scope.IP)
     @PostMapping("/auth/login")
+    @Operation(summary = "手机号 + 密码登录", description = "成功返回 token、refreshToken 与用户信息；连续失败会被限流拦截")
     public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody CtLoginBody body)
     {
         try
@@ -65,6 +69,7 @@ public class ApiAuthController
     @Anonymous
     @RateLimit(permits = 10, seconds = 60, key = "refresh", scope = RateLimit.Scope.IP)
     @PostMapping("/auth/refresh")
+    @Operation(summary = "刷新令牌换新", description = "一次性：旧 refreshToken 用后即废，并下发新的")
     public ResponseEntity<Map<String, Object>> refresh(@Valid @RequestBody CtRefreshBody body)
     {
         try
@@ -81,6 +86,7 @@ public class ApiAuthController
      * 退出登录
      */
     @PostMapping("/auth/logout")
+    @Operation(summary = "退出登录", description = "使当前访问令牌失效")
     public ResponseEntity<Map<String, Object>> logout()
     {
         authService.logout();
@@ -91,6 +97,7 @@ public class ApiAuthController
      * 获取当前登录用户信息
      */
     @GetMapping("/user/info")
+    @Operation(summary = "当前登录用户信息")
     public ResponseEntity<Map<String, Object>> userInfo()
     {
         try

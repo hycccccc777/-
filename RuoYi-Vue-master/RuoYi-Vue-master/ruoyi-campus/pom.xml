@@ -45,6 +45,14 @@
             <artifactId>flyway-mysql</artifactId>
         </dependency>
 
+<!-- OpenAPI 文档注解：@Tag / @Operation / @Schema。
+             注意 scope 保持默认 compile：注解在运行时会被 springdoc 读取，
+             若设成 provided，打包后 Swagger UI 的分组会消失。 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>
