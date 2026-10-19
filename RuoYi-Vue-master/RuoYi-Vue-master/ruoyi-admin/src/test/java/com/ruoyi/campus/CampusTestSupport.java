@@ -21,7 +21,7 @@ import com.ruoyi.common.core.domain.model.LoginUser;
 @SpringBootTest(properties = {
         "spring.datasource.druid.master.url=jdbc:mysql://localhost:3306/shop_test?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8",
         "spring.datasource.druid.master.username=root",
-        "spring.datasource.druid.master.password=qazwsx@134567",
+        "spring.datasource.druid.master.password=${CAMPUS_DB_PASSWORD:qazwsx@134567}",
         "spring.datasource.druid.maxActive=30",
         "spring.data.redis.database=4",
         "logging.level.root=warn",

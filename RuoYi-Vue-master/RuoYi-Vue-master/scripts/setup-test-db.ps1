@@ -1,8 +1,8 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [string] $MysqlBin = "C:\Program Files\MySQL\MySQL Server 26.7\bin",
     [string] $User     = "root",
-    [string] $Password = "qazwsx@134567",
+    [string] $Password = $(if ($env:CAMPUS_DB_PASSWORD) { $env:CAMPUS_DB_PASSWORD } else { "qazwsx@134567" }),
     [string] $TestDb   = "shop_test",
     [switch] $Keep
 )

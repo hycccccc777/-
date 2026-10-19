@@ -288,6 +288,27 @@ com.ruoyi.campus.payment
 
 ---
 
+### 凭据配置
+
+代码与配置里不硬编码生产凭据，统一走环境变量，开发默认值仅作兜底：
+
+| 环境变量 | 用途 | 默认值 |
+| --- | --- | --- |
+| `CAMPUS_DB_URL` | 数据库连接串 | `jdbc:mysql://localhost:3306/shop...` |
+| `CAMPUS_DB_USERNAME` | 数据库账号 | `root` |
+| `CAMPUS_DB_PASSWORD` | 数据库密码 | 仅本地开发用的默认值 |
+| `CAMPUS_PAY_SECRET` | 支付回调签名密钥 | `change-me-in-production` |
+
+```powershell
+# 生产/CI 覆盖示例
+$env:CAMPUS_DB_PASSWORD = "<真实密码>"
+$env:CAMPUS_PAY_SECRET   = "<随机密钥>"
+java -jar ruoyi-admin\target\ruoyi-admin.jar
+```
+
+> Docker Compose 下由 `.env` 提供同名变量注入；`docker/mysql-init` 只读挂载 `sql/` 目录，不额外注入凭据。
+
+---
 ## 十、容器化启动（Docker Compose）
 
 ```bash
