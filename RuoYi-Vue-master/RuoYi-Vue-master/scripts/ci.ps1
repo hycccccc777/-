@@ -13,13 +13,13 @@
     环境变量（都有默认值，本地开箱即用）：
         CAMPUS_DB_USERNAME  默认 root
         CAMPUS_DB_PASSWORD  默认本地开发密码
-        MYSQL_HOST          默认 127.0.0.1
 #>
 [CmdletBinding()]
 param(
     [switch] $SkipTests,
     [switch] $SkipFrontend,
     [switch] $SkipDocker,
+    [switch] $SkipBackend,
     [string] $Maven
 )
 
@@ -28,7 +28,8 @@ $ErrorActionPreference = 'Stop'
 # ---------- 定位项目根 ----------
 $scriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backendDir = Resolve-Path (Join-Path $scriptDir '..')
-$repoRoot   = Resolve-Path (Join-Path $backendDir '..\..')
+# 用 Parent 链而非 '..\..'：反斜杠在 Linux 上不是路径分隔符，会导致 CI 找不到前端目录
+$repoRoot   = (Get-Item $backendDir).Parent.Parent.FullName
 $frontendDir = Join-Path $repoRoot '校易淘前端-后端交接-2026-10-19T01-05-57-755Z'
 
 # ---------- 环境变量兜底 ----------
@@ -113,14 +114,16 @@ Write-Host ("  JDK        : " + $jdkInfo)
 Write-Host ("  数据库     : " + $env:MYSQL_HOST + " / " + $testDb)
 
 # ---------- 1. 编译 ----------
+if (-not $SkipBackend) {
 Invoke-Step '后端编译' {
     Push-Location $backendDir
     try { & $mvn -B -DskipTests clean package; Assert-LastExitCode 'mvn package' }
     finally { Pop-Location }
 }
+}
 
 # ---------- 2. 测试库 ----------
-if (-not $SkipTests) {
+if (-not $SkipTests -and -not $SkipBackend) {
     Invoke-Step '准备测试库' {
         & (Join-Path $scriptDir 'setup-test-db.ps1')
         Assert-LastExitCode 'setup-test-db.ps1'
@@ -134,7 +137,7 @@ if (-not $SkipTests) {
     }
 
     # 汇总测试数量
-    $reports = Join-Path $backendDir 'ruoyi-admin\target\surefire-reports\*.txt'
+    $reports = Join-Path (Join-Path $backendDir 'ruoyi-admin') 'target/surefire-reports/*.txt'
     $total = 0; $failed = 0
     Get-ChildItem $reports -ErrorAction SilentlyContinue | ForEach-Object {
         $line = Get-Content $_.FullName -Encoding UTF8 | Select-String -Pattern 'Tests run:' | Select-Object -First 1

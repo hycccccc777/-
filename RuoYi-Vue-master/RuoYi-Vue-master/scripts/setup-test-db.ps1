@@ -1,6 +1,6 @@
 ﻿[CmdletBinding()]
 param(
-    [string] $MysqlBin = "C:\Program Files\MySQL\MySQL Server 26.7\bin",
+    [string] $MysqlBin = "",
     [string] $User     = "root",
     [string] $Password = $(if ($env:CAMPUS_DB_PASSWORD) { $env:CAMPUS_DB_PASSWORD } else { "qazwsx@134567" }),
     [string] $TestDb   = "shop_test",
@@ -8,8 +8,26 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$mysql = Join-Path $MysqlBin "mysql.exe"
-if (-not (Test-Path $mysql)) { throw "mysql client not found: $mysql" }
+
+# Windows 的 $env:TEMP 在 Linux/macOS 上不存在，统一改用 .NET 的临时目录
+$tmpDir = [System.IO.Path]::GetTempPath()
+if ($MysqlBin) {
+    # 显式指定时兼容 Windows 的 mysql.exe 与类 Unix 的 mysql
+    $mysql = @((Join-Path $MysqlBin 'mysql.exe'), (Join-Path $MysqlBin 'mysql')) |
+             Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $mysql) { throw "在 $MysqlBin 下找不到 mysql 客户端" }
+} else {
+    # 先看 PATH（Linux/CI 上由系统包提供），再回退到 Windows 默认安装位置
+    $onPath = Get-Command mysql -ErrorAction SilentlyContinue
+    if ($onPath) {
+        $mysql = $onPath.Source
+    } else {
+        $guess = Get-ChildItem 'C:\Program Files\MySQL' -Filter 'mysql.exe' -Recurse -ErrorAction SilentlyContinue |
+                 Select-Object -First 1
+        if (-not $guess) { throw "找不到 mysql 客户端：请安装到 PATH，或用 -MysqlBin 指定目录" }
+        $mysql = $guess.FullName
+    }
+}
 
 $files = @("ry_20260417.sql", "quartz.sql", "campus_trade.sql",
            "campus_menu.sql", "campus_seed_products.sql", "campus_test_data.sql")
@@ -18,11 +36,11 @@ function Invoke-Sql {
     param([string] $ArgString, [string] $InputFile, [string] $Label)
     $p = @{ FilePath = $mysql; ArgumentList = $ArgString
             NoNewWindow = $true; PassThru = $true; Wait = $true
-            RedirectStandardError = "$env:TEMP\mysql_err.txt" }
+            RedirectStandardError = "$tmpDir\mysql_err.txt" }
     if ($InputFile) { $p["RedirectStandardInput"] = $InputFile }
     $r = Start-Process @p
     if ($r.ExitCode -ne 0) {
-        $e = if (Test-Path "$env:TEMP\mysql_err.txt") { Get-Content "$env:TEMP\mysql_err.txt" -Raw } else { "" }
+        $e = if (Test-Path "$tmpDir\mysql_err.txt") { Get-Content "$tmpDir\mysql_err.txt" -Raw } else { "" }
         throw "$Label failed (exit=$($r.ExitCode)) :: $e"
     }
 }
@@ -46,7 +64,7 @@ try {
 
     Write-Host "[4/4] verify"
     $sql = "select concat('buyers=',(select count(*) from sys_user where user_id between 2001 and 2020),' seller=',(select count(*) from sys_user where user_id=2100),' test_products=',(select count(*) from ct_product where product_id>=9001),' limit_stock=',(select stock from ct_product where product_id=9001));"
-    $out = "$env:TEMP\mysql_out.txt"
+    $out = "$tmpDir\mysql_out.txt"
     Start-Process -FilePath $mysql -ArgumentList "-u$User -p$Password --default-character-set=utf8mb4 -N -B $TestDb -e `"$sql`"" -NoNewWindow -PassThru -Wait -RedirectStandardOutput $out | Out-Null
     Write-Host ("      " + (Get-Content $out -Raw).Trim())
 }

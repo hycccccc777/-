@@ -291,11 +291,24 @@ powershell -File scripts\ci.ps1 -Maven D:\tools\apache-maven-3.9.9\bin\mvn.cmd
 > ⚠ Windows 下若前端安装报 `EPERM: unlink ... esbuild.exe`，是 esbuild 进程残留占用文件，
 > 关闭 Vite / Node 进程或重启终端即可，与代码无关。
 
-### 免费 CI 方案
+### 免费 CI 方案：GitHub Actions
 
-`.github/workflows/ci.yml` 已就绪（公开仓库的 GitHub Actions **免费且分钟数不限**，
-私有仓库 GitHub Free 每月 2000 分钟）。若需要托管 CI，把仓库镜像一份到 GitHub 即可；
-若不想额外注册平台，直接用上面的 `scripts/ci.ps1`。
+Gitee Go 需要付费，Gitee 内的流水线也已并入 Gitee Go，因此 CI 统一放在 GitHub：
+
+| 项 | 说明 |
+| --- | --- |
+| 公开仓库 | **免费且分钟数不限** |
+| 私有仓库（GitHub Free） | 每月 2000 分钟 + 500 MB 制品 + 10 GB 缓存 |
+
+`.github/workflows/ci.yml` **不重复编写编译/测试步骤，而是直接调用 `scripts/ci.ps1`**，
+保证本地与 CI 跑的是同一套逻辑：
+
+| Job | 命令 | 实际执行 |
+| --- | --- | --- |
+| backend | `./scripts/ci.ps1 -SkipFrontend -SkipDocker` | 编译 → 造 shop_test → 后端 14 个集成测试 |
+| frontend | `./scripts/ci.ps1 -SkipBackend -SkipTests -SkipDocker` | npm ci → 前端单测 → 构建 → 构建镜像 |
+
+> 需要把仓库镜像一份到 GitHub 后才会触发；Gitee 上的副本仅作为代码托管与国内访问入口。
 
 ---
 ## 十、支付网关抽象
