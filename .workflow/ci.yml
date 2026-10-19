@@ -1,0 +1,90 @@
+# =====================================================================
+# Gitee Go 流水线
+#
+# GitHub Actions 的配置在 Gitee 上不会运行（Gitee 用自己的 .workflow/ 目录），
+# 所以这里单独维护一份。若之后把仓库镜像到 GitHub，.github/workflows/ci.yml 会自动生效。
+#
+# 使用前需在仓库设置中启用「Gitee Go」，否则本文件不会触发。
+# 本文件未经线上验证，首次启用很可能需要按实际构建环境微调（尤其是 JDK 与 MySQL）。
+# =====================================================================
+version: '1.0'
+name: school-easy-purchase-ci
+displayName: 校易淘 CI 流水线（编译 + 测试 + 镜像构建）
+
+triggers:
+  trigger: auto
+  push:
+    branches:
+      precise:
+        - main
+      fuzzy:
+        - master
+  pr:
+    - open
+    - sync
+
+variables:
+  BACKEND_DIR: RuoYi-Vue-master/RuoYi-Vue-master
+  FRONTEND_DIR: 校易淘前端-后端交接-2026-10-19T01-05-57-755Z
+  MYSQL_TEST_PASSWORD: test123456
+  # 凭据统一走环境变量注入，代码与配置中不硬编码
+  CAMPUS_DB_PASSWORD: test123456
+
+stages:
+
+  # 每个 step 都先 cd 到仓库根目录，避免依赖上一个 step 遗留的工作目录
+  - stage:
+      name: backend
+      displayName: 后端编译与测试
+      steps:
+        - step: shell@agent
+          name: build
+          displayName: 编译打包
+          commands:
+            - cd $(git rev-parse --show-toplevel)/$BACKEND_DIR
+            - mvn -B -DskipTests clean package
+
+        - step: shell@agent
+          name: prepare-test-db
+          displayName: 准备测试库 shop_test
+          commands:
+            - cd $(git rev-parse --show-toplevel)/$BACKEND_DIR
+            - mysql -h127.0.0.1 -uroot -p$MYSQL_TEST_PASSWORD -e "create database if not exists shop_test default character set utf8mb4 collate utf8mb4_general_ci;"
+            - for f in ry_20260417 quartz campus_trade campus_menu campus_seed_products campus_test_data; do
+                echo "importing sql/$f.sql";
+                mysql -h127.0.0.1 -uroot -p$MYSQL_TEST_PASSWORD --default-character-set=utf8mb4 shop_test < "sql/$f.sql";
+              done
+
+        - step: shell@agent
+          name: test
+          displayName: 运行测试
+          commands:
+            - cd $(git rev-parse --show-toplevel)/$BACKEND_DIR
+            - mvn -B -pl ruoyi-admin -am test
+
+        - step: docker@agent
+          name: image
+          displayName: 构建后端镜像
+          commands:
+            - cd $(git rev-parse --show-toplevel)/$BACKEND_DIR
+            - docker build -t school-easy-backend:${{GIT_COMMIT}} .
+
+  - stage:
+      name: frontend
+      displayName: 前端构建与测试
+      steps:
+        - step: shell@agent
+          name: test
+          displayName: 单元测试与构建
+          commands:
+            - cd "$(git rev-parse --show-toplevel)/$FRONTEND_DIR"
+            - npm ci --registry=https://registry.npmmirror.com
+            - npm test
+            - npm run build
+
+        - step: docker@agent
+          name: image
+          displayName: 构建前端镜像
+          commands:
+            - cd "$(git rev-parse --show-toplevel)/$FRONTEND_DIR"
+            - docker build -t school-easy-frontend:${{GIT_COMMIT}} .
