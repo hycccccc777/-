@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string] $MysqlBin = "C:\Program Files\MySQL\MySQL Server 26.7\bin",
     [string] $User     = "root",

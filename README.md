@@ -263,7 +263,42 @@ java -jar ruoyi-admin\target\ruoyi-admin.jar
 
 ---
 
-## 九、支付网关抽象
+## 九、跑 CI（不依赖任何付费平台）
+
+Gitee Go 需付费，因此**不把 CI 押在托管平台上**。仓库里提供一份统一脚本，
+本地、CI、自建 Runner 跑的都是同一套逻辑，不会出现「本地全绿、CI 挂了」。
+
+```powershell
+cd RuoYi-Vue-master/RuoYi-Vue-master
+
+# 完整流程（编译 → 造测试库 → 后端测试 → 前端安装/测试/构建）
+powershell -ExecutionPolicy Bypass -File scripts\ci.ps1
+
+# 常用组合
+powershell -File scripts\ci.ps1 -SkipTests      # 只编译
+powershell -File scripts\ci.ps1 -SkipFrontend   # 只跑后端
+powershell -File scripts\ci.ps1 -Maven D:\tools\apache-maven-3.9.9\bin\mvn.cmd
+```
+
+| 退出码 | 含义 |
+| --- | --- |
+| `0` | 全部通过 |
+| `1` | 某个步骤失败（终端会打印失败步骤与原因） |
+
+脚本会输出耗时汇总表，方便定位是哪一步慢。找不到 Maven 时会给出三种解决方式，
+而不是抛出一句无法定位的「术语无法识别」。
+
+> ⚠ Windows 下若前端安装报 `EPERM: unlink ... esbuild.exe`，是 esbuild 进程残留占用文件，
+> 关闭 Vite / Node 进程或重启终端即可，与代码无关。
+
+### 免费 CI 方案
+
+`.github/workflows/ci.yml` 已就绪（公开仓库的 GitHub Actions **免费且分钟数不限**，
+私有仓库 GitHub Free 每月 2000 分钟）。若需要托管 CI，把仓库镜像一份到 GitHub 即可；
+若不想额外注册平台，直接用上面的 `scripts/ci.ps1`。
+
+---
+## 十、支付网关抽象
 
 支付是**策略模式**实现的，业务层只依赖 `PaymentGateway` 接口，不感知具体渠道。
 
@@ -309,7 +344,7 @@ java -jar ruoyi-admin\target\ruoyi-admin.jar
 > Docker Compose 下由 `.env` 提供同名变量注入；`docker/mysql-init` 只读挂载 `sql/` 目录，不额外注入凭据。
 
 ---
-## 十、容器化启动（Docker Compose）
+## 十一、容器化启动（Docker Compose）
 
 ```bash
 cp .env.example .env      # 按需改端口与密码
@@ -334,7 +369,7 @@ docker compose up -d --build
 
 ---
 
-## 十一、持续集成（CI）
+## 十二、持续集成（CI)
 
 `.github/workflows/ci.yml` 在 push / PR 时自动执行：
 
@@ -348,7 +383,7 @@ docker compose up -d --build
 > ⚠ **当前工作区还不是 git 仓库**，CI 只有在推送到 GitHub 后才会生效。建议先 `git init` 并纳入版本管理（`.env`、`node_modules`、`target` 必须进 `.gitignore`）。
 
 ---
-## 十二、尚未实现（诚实说明）
+## 十三、尚未实现（诚实说明）
 
 - **真实支付**：使用沙箱支付（`POST /api/v1/pay/{payNo}/confirm` 直接置为成功）。接入真实网关需替换为异步回调校验。
 - **配送费**：暂恒为 0，未区分自提 / 配送计费。
