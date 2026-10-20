@@ -6,6 +6,30 @@
 
 ---
 
+## 验收材料导航
+
+| 材料 | 位置 | 内容 |
+| --- | --- | --- |
+| 技术栈与开发环境 | `docs/技术栈与开发环境说明.md` | 逐项截图说明语言、平台、数据库、缓存、容器、监控、CI/CD、测试工具 |
+| 企业级能力对照 | `docs/企业级能力对照表.md` | 安全 / 一致性 / 性能 / 可靠性 / 工程化 / 运维，逐项 file:line 证据，未覆盖项如实标注 |
+| 性能压测报告 | `docs/性能压测报告.md` | 实测 QPS、RT 分位、错误率，附复现脚本 |
+| 数据库设计 | `docs/数据库设计说明.md` | 表结构与索引说明 |
+| 接口文档 | `docs/接口文档.md` | 接口清单与约定 |
+| 部署架构 | `docs/screenshots/09-architecture.png` | 分层拓扑图 |
+| 覆盖率报告 | `docs/screenshots/10-coverage.png` | JaCoCo：业务模块行覆盖 42.9% |
+| 截图总目录 | `docs/screenshots/` | 01~10，含 Swagger、Druid、数据库、CI 记录 |
+
+一键复现：
+
+```bat
+检查服务.cmd                       :: 后端/前端/文档/代理链路逐项自检
+docs\采集环境信息.cmd              :: 打印并生成运行环境版本图
+scripts\coverage.ps1               :: 生成 JaCoCo 覆盖率报告
+node scripts\loadtest.mjs http://localhost:8080 20 20   :: 压测
+scripts\backup.ps1                 :: 数据库备份（需 CAMPUS_DB_PASSWORD）
+```
+
+---
 ## 一、功能总览
 
 | 角色 | 已实现能力 |
