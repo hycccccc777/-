@@ -96,6 +96,13 @@ mysql -uroot -p --default-character-set=utf8mb4 shop < campus_seed_products.sql
 
 ### 3. 启动后端
 
+**最省事的办法：双击仓库根目录的 `启动后端.cmd`。**
+
+它会依次检查 MySQL(3306) 与 Redis(6379) 是否在监听、定位 `java` 与 `mvn`、
+在 jar 不存在时自动构建，然后启动服务。任何一步不满足都会给出明确提示。
+
+手动方式：
+
 ```powershell
 $env:JAVA_HOME = "C:\jdk-17"   # 按实际路径修改
 cd RuoYi-Vue-master\RuoYi-Vue-master
@@ -108,9 +115,24 @@ java -jar ruoyi-admin\target\ruoyi-admin.jar
 访问地址：
 - 后台管理：http://localhost:8080
 - Druid 监控：http://localhost:8080/druid （ruoyi / 123456）
-- 接口文档：http://localhost:8080/swagger-ui.html
+- 接口文档：http://localhost:8080/swagger-ui/index.html （分组选 `campus`）
+- OpenAPI 契约：http://localhost:8080/v3/api-docs/campus
 
+### 3.5 更省事的办法：双击脚本
+
+仓库根目录放了三个脚本，Windows 下双击即可：
+
+| 脚本 | 作用 |
+| --- | --- |
+| `启动后端.cmd` | 检查 MySQL/Redis 端口、定位 java 与 mvn、jar 不存在时自动构建，然后启动后端 |
+| `启动前端.cmd` | 缺依赖时自动 `npm install`，然后启动 Vite |
+| `检查服务.cmd` | 逐项探测后端接口、OpenAPI 契约、Swagger UI、前端页面，以及「经前端代理打后端」这条链路 |
+
+> 后端与前端是两个进程，**需要两个窗口同时开着**。
+> 只开前端的话页面能打开，但接口会报 `ECONNREFUSED 127.0.0.1:8080`。
 ### 4. 启动前端
+
+**双击仓库根目录的 `启动前端.cmd`**（自动装依赖并启动），或手动：
 
 ```powershell
 cd 校易淘前端-后端交接-2026-10-19T01-05-57-755Z
@@ -121,6 +143,24 @@ npm run dev
 访问 **http://127.0.0.1:5174** 。开发服务器已把 `/api` 与 `/profile` 代理到 `http://127.0.0.1:8080`。
 
 如需改后端地址：复制 `.env.example` 为 `.env.local`，修改 `DEV_API_TARGET`，**重启**开发服务器。
+
+### 5. 一键自检
+
+双击仓库根目录的 `检查服务.cmd`，会逐项探测后端接口、OpenAPI 契约、
+Swagger UI、前端页面以及「经前端代理打后端」这条链路，全绿才算环境就绪：
+
+```
+  [OK]   后端探活
+  [OK]   后端商品列表
+  [OK]   后端类目列表
+  [OK]   OpenAPI 契约
+  [OK]   Swagger UI
+  [OK]   前端页面
+  [OK]   经前端代理打后端
+```
+
+> 后端与前端是两个进程，需要**两个窗口同时开着**。只开前端的话，
+> 页面能打开但接口报 `ECONNREFUSED 127.0.0.1:8080`。
 
 ---
 
@@ -288,7 +328,7 @@ powershell -File scripts\ci.ps1 -Maven D:\tools\apache-maven-3.9.9\bin\mvn.cmd
 脚本会输出耗时汇总表，方便定位是哪一步慢。找不到 Maven 时会给出三种解决方式，
 而不是抛出一句无法定位的「术语无法识别」。
 
-> ⚠ Windows 下若前端安装报 `EPERM: unlink ... esbuild.exe`，是 esbuild 进程残留占用文件，
+> ? Windows 下若前端安装报 `EPERM: unlink ... esbuild.exe`，是 esbuild 进程残留占用文件，
 > 关闭 Vite / Node 进程或重启终端即可，与代码无关。
 
 ### 免费 CI 方案：GitHub Actions
@@ -346,6 +386,7 @@ com.ruoyi.campus.payment
 | `CAMPUS_DB_USERNAME` | 数据库账号 | `root` |
 | `CAMPUS_DB_PASSWORD` | 数据库密码 | 仅本地开发用的默认值 |
 | `CAMPUS_PAY_SECRET` | 支付回调签名密钥 | `change-me-in-production` |
+| `SPRINGDOC_ENABLED` | 是否开放接口文档端点 | `true`（生产建议设 `false`） |
 
 ```powershell
 # 生产/CI 覆盖示例
@@ -383,7 +424,7 @@ docker compose up -d --build
 - **SQL 只保留一份**：`docker/mysql-init/00_bootstrap.sql` 用 `source` 显式指定执行顺序，避开 MySQL 镜像「按文件名字典序执行」的坑
 - **密钥不落镜像**：`CAMPUS_PAY_SECRET` 只从环境变量注入
 
-> ⚠ 本机未安装 Docker，以上配置**尚未实机验证过**，仅完成了两件事：用 YAML 解析器校验语法、逐条校验 compose 引用的路径与 `source` 的 SQL 文件均真实存在。上机后请先跑一次 `docker compose config` 与 `docker compose up`。
+> ? 本机未安装 Docker，以上配置**尚未实机验证过**，仅完成了两件事：用 YAML 解析器校验语法、逐条校验 compose 引用的路径与 `source` 的 SQL 文件均真实存在。上机后请先跑一次 `docker compose config` 与 `docker compose up`。
 
 ---
 
@@ -396,9 +437,9 @@ docker compose up -d --build
 
 | 依赖 | 验证状态 |
 | --- | --- |
-| MySQL 26.7（服务名 `MySQL267`，3306） | ✅ 实测 |
-| Redis（服务 `Redis`，6379） | ✅ 实测 |
-| JDK 17+ | ✅ 实测（JDK 27） |
+| MySQL 26.7（服务名 `MySQL267`，3306） | ? 实测 |
+| Redis（服务 `Redis`，6379） | ? 实测 |
+| JDK 17+ | ? 实测（JDK 27） |
 
 ### 启动步骤
 
@@ -457,7 +498,7 @@ curl http://localhost:8080/api/v1/products?pageSize=1
 
 任一步失败都会阻止合并；同一分支的新提交会自动取消进行中的旧任务。
 
-> ⚠ **当前工作区还不是 git 仓库**，CI 只有在推送到 GitHub 后才会生效。建议先 `git init` 并纳入版本管理（`.env`、`node_modules`、`target` 必须进 `.gitignore`）。
+> ? **当前工作区还不是 git 仓库**，CI 只有在推送到 GitHub 后才会生效。建议先 `git init` 并纳入版本管理（`.env`、`node_modules`、`target` 必须进 `.gitignore`）。
 
 ---
 ## 十四、尚未实现（诚实说明）

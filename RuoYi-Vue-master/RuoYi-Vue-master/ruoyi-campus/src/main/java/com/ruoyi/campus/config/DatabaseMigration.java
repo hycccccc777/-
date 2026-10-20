@@ -47,7 +47,12 @@ public class DatabaseMigration implements ApplicationRunner
         var result = flyway.migrate();
         if (result.migrationsExecuted == 0)
         {
-            log.info("数据库无需迁移，当前版本 {}", result.targetSchemaVersion);
+            // Flyway 12 的 MigrateResult 没有 currentSchemaVersion 字段；
+            // 而 targetSchemaVersion 在「本次没有执行任何迁移」时是 null，
+            // 直接打印会得到「当前版本 null」，看不出数据库到底是哪个版本。
+            // initialSchemaVersion 才是当前真实版本（未迁移时两者相同）。
+            String current = result.initialSchemaVersion != null ? result.initialSchemaVersion : "未知";
+            log.info("数据库无需迁移，当前版本 {}", current);
         }
         else
         {
