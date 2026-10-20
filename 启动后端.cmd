@@ -3,21 +3,28 @@ chcp 65001 >nul
 setlocal enabledelayedexpansion
 cd /d "%~dp0RuoYi-Vue-master\RuoYi-Vue-master"
 
+set "PORT=%~1"
+if not defined PORT set "PORT=8080"
+
+set "MVN_DIR=%LOCALAPPDATA%\campus-maven"
+set "MVN_VER=3.9.9"
+set "MVN_HOME=%MVN_DIR%\apache-maven-%MVN_VER%"
+
 echo ============================================
-echo  校易淘 · 后端启动
+echo  校易淘 · 后端启动    端口 %PORT%
 echo ============================================
 echo.
 
-rem ---------- 1. 检查 MySQL / Redis 是否在跑 ----------
+rem ---------- 1. 检查 MySQL / Redis ----------
 netstat -ano | findstr ":3306" | findstr "LISTENING" >nul
 if errorlevel 1 (
-  echo [x] 没检测到 3306 端口，请先启动 MySQL 服务 MySQL267
+  echo [x] 没检测到 3306 端口，请先启动 MySQL 服务（默认服务名 MySQL267）
   pause & exit /b 1
 )
 echo [OK] MySQL 3306 在监听
 netstat -ano | findstr ":6379" | findstr "LISTENING" >nul
 if errorlevel 1 (
-  echo [x] 没检测到 6379 端口，请先启动 Redis 服务 Redis
+  echo [x] 没检测到 6379 端口，请先启动 Redis 服务
   pause & exit /b 1
 )
 echo [OK] Redis 6379 在监听
@@ -34,46 +41,76 @@ if not defined JAVA_BIN (
 )
 echo [OK] java: %JAVA_BIN%
 
-rem ---------- 3. 定位 mvn（仅在需要构建时用）----------
+rem ---------- 3. 已有 jar 就直接跑，不需要 Maven ----------
+if exist "ruoyi-admin\target\ruoyi-admin.jar" (
+  echo [OK] jar 已存在，跳过构建
+  goto :run
+)
+
+echo.
+echo [1/3] 未找到 jar，需要构建
+
+rem ---------- 4. 定位 Maven，找不到就自动下载 ----------
 set "MVN_CMD="
 where mvn >nul 2>nul && set "MVN_CMD=mvn"
-if not defined MVN_CMD (
-  for %%m in ("%TEMP%\maven-dist\apache-maven-3.9.16\bin\mvn.cmd") do if exist "%%~m" set "MVN_CMD=%%~m"
-)
-if not defined MVN_CMD (
-  for %%m in ("%USERPROFILE%\.m2\wrapper\dists\*.mvn") do set "MVN_CMD=%%~m\bin\mvn.cmd"
+if not defined MVN_CMD if exist "%MVN_HOME%\bin\mvn.cmd" set "MVN_CMD=%MVN_HOME%\bin\mvn.cmd"
+if not defined MVN_CMD for /d %%d in ("%USERPROFILE%\.m2\wrapper\dists\apache-maven-*") do (
+  for /d %%e in ("%%d\*") do if exist "%%e\bin\mvn.cmd" set "MVN_CMD=%%e\bin\mvn.cmd"
 )
 
-rem ---------- 4. 确保 jar 存在 ----------
-if not exist "ruoyi-admin\target\ruoyi-admin.jar" (
-  echo.
-  echo [1/2] 未找到 jar，正在构建（首次约需 1-2 分钟）...
-  if not defined MVN_CMD (
-    echo [x] 找不到 mvn，请安装 Maven 或手动执行:
-    echo     mvn -pl ruoyi-admin -am -DskipTests package
+if not defined MVN_CMD (
+  echo     未找到 Maven，自动下载 %MVN_VER% 到 %MVN_HOME%
+  if not exist "%MVN_DIR%" mkdir "%MVN_DIR%"
+  set "DL_OK="
+  for %%u in (
+    https://archive.apache.org/dist/maven/maven-3/%MVN_VER%/binaries/apache-maven-%MVN_VER%-bin.zip
+    https://dlcdn.apache.org/maven/maven-3/%MVN_VER%/binaries/apache-maven-%MVN_VER%-bin.zip
+    https://mirrors.aliyun.com/apache/maven/maven-3/%MVN_VER%/binaries/apache-maven-%MVN_VER%-bin.zip
+  ) do (
+    if not defined DL_OK (
+      echo     尝试镜像: %%u
+      curl.exe -L --max-time 180 -s -o "%MVN_DIR%\maven.zip" "%%u"
+      if exist "%MVN_DIR%\maven.zip" for %%s in ("%MVN_DIR%\maven.zip") do if %%~zs GTR 5000000 set "DL_OK=1"
+    )
+  )
+  if not defined DL_OK (
+    echo [x] 所有镜像下载失败，请手动下载并解压到 %MVN_HOME%
+    echo     https://archive.apache.org/dist/maven/maven-3/%MVN_VER%/binaries/apache-maven-%MVN_VER%-bin.zip
     pause & exit /b 1
   )
-  call "%MVN_CMD%" -pl ruoyi-admin -am -DskipTests package
-  if errorlevel 1 (
-    echo [x] 构建失败，请检查上方错误
+  powershell -NoProfile -Command "Expand-Archive -LiteralPath '%MVN_DIR%\maven.zip' -DestinationPath '%MVN_DIR%' -Force" >nul
+  del /q "%MVN_DIR%\maven.zip" 2>nul
+  if exist "%MVN_HOME%\bin\mvn.cmd" (
+    set "MVN_CMD=%MVN_HOME%\bin\mvn.cmd"
+  ) else (
+    echo [x] Maven 自动下载失败。
+    echo     可选：手动安装 Maven 并加入 PATH，或用镜像手动下载：
+    echo     https://archive.apache.org/dist/maven/maven-3/%MVN_VER%/binaries/apache-maven-%MVN_VER%-bin.zip
     pause & exit /b 1
   )
-) else (
-  echo [OK] jar 已存在，跳过构建
+)
+echo [OK] mvn: %MVN_CMD%
+
+echo.
+echo [2/3] 正在构建（首次约 1-2 分钟）...
+call "%MVN_CMD%" -q -pl ruoyi-admin -am -DskipTests package
+if errorlevel 1 (
+  echo [x] 构建失败，请检查上方错误
+  pause & exit /b 1
 )
 
-rem ---------- 5. 启动 ----------
+:run
 set "CAMPUS_DB_PASSWORD=qazwsx@134567"
 set "LOG_PATH=%~dp0logs"
 if not exist "%LOG_PATH%" mkdir "%LOG_PATH%"
 
 echo.
-echo [2/2] 启动后端...
-echo     接口   http://localhost:8080/api/v1/products?pageSize=1
-echo     文档   http://localhost:8080/swagger-ui/index.html
-echo     探活   http://localhost:8080/api/v1/system/health
+echo [3/3] 启动后端...
+echo     接口   http://localhost:%PORT%/api/v1/products?pageSize=1
+echo     文档   http://localhost:%PORT%/swagger-ui/index.html
+echo     探活   http://localhost:%PORT%/api/v1/system/health
 echo     日志   %LOG_PATH%
-echo     按 Ctrl+C 停止
+echo     按 Ctrl+C 停止（换端口：启动后端.cmd 8090）
 echo.
-"%JAVA_BIN%" -jar ruoyi-admin\target\ruoyi-admin.jar
+"%JAVA_BIN%" -jar ruoyi-admin\target\ruoyi-admin.jar --server.port=%PORT%
 pause
