@@ -104,6 +104,21 @@
                     <warName>${project.artifactId}</warName>
                 </configuration>   
            </plugin>   
+            <!-- 覆盖率聚合：测试跑在 ruoyi-admin，业务代码在 ruoyi-campus，
+                 用 report-aggregate 把依赖模块的类一并纳入统计 -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>report-aggregate</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <finalName>${project.artifactId}</finalName>
     </build>

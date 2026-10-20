@@ -84,6 +84,14 @@ jobs:
           path: RuoYi-Vue-master/RuoYi-Vue-master/ruoyi-admin/target/surefire-reports/
           if-no-files-found: ignore
 
+      - name: 上传覆盖率报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage
+          path: RuoYi-Vue-master/RuoYi-Vue-master/ruoyi-admin/target/site/jacoco-aggregate/
+          if-no-files-found: ignore
+
   # =====================================================================
   # 容器编排验证
   #
