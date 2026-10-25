@@ -18,7 +18,9 @@
 | 数据库设计 | `docs/数据库设计说明.md` | 表结构与索引说明 |
 | 接口文档 | `docs/接口文档.md` | 接口清单与约定 |
 | 部署架构 | `docs/screenshots/09-architecture.png` | 分层拓扑图 |
-| 指标与告警 | `docs/ops/alert-rules.yml` | Prometheus 抓取与 5 条告警规则 |
+| 指标与告警 | `docs/ops/` | 6 条告警规则 + Prometheus 抓取 + Alertmanager 路由（`docker-compose.monitoring.yml` 一键起栈） |
+| 告警自检 | `scripts/check-alerting.ps1` | 规则引用的指标是否真实存在；缺失即失败（防「规则永不触发」） |
+| 备份定时 | `scripts/install-backup-task.ps1` | 注册每日 02:00 计划任务并立即验证产出 |
 | 依赖巡检策略 | `.github/dependabot.yml` | 只升 minor/patch 并合并成 1 个 PR，忽略 major |
 | 覆盖率报告 | `docs/screenshots/10-coverage.png` | JaCoCo：业务模块行覆盖 42.9% |
 | 截图总目录 | `docs/screenshots/` | 01~14，含 Swagger、Druid、数据库、CI、指标、多实例、闭环、权限 |
@@ -537,11 +539,23 @@ curl http://localhost:8080/api/v1/products?pageSize=1
 - **收藏**：仍为前端本地存储，未服务端化。
 - **商品审核**：新发布商品直接上架（`status=1`），若需审核改为 `0` 并在后台加审核动作。
 - **部分退款 / 售后**：仅支持全额退款；已完成订单不支持售后。
-- **登录态**：令牌仅存于内存，刷新页面需重新登录（无 refreshToken）。
-- **Docker 未实机验证**：本机无 Docker，容器化与 CI 仅完成静态校验。
-- **无 Git 版本管理**：工作区尚未 git init，CI 暂不生效。
----
+- **多实例部署**：限流（Redis 共享计数）与定时任务（Quartz JDBC 集群）已就绪，但缺负载均衡与多机部署。
+- **日志集中化**：仅本地文件 + TraceId，未接 Loki / ELK。
+- **熔断降级**：未引入 Resilience4j；限流器对 Redis 故障 fail-open。
+- **静态检查 / E2E**：未接入 Checkstyle / ESLint / Playwright。
+- **本机无 Docker**：容器化由 CI runner 实测（`compose up` + 经 Nginx 冒烟），本机只做静态校验。
 
+### 已从「未实现」移出并验证过的
+
+| 项 | 证据 |
+| --- | --- |
+| 刷新令牌 | refreshToken 落 Redis、一次性使用；`RefreshTokenFlowTest` |
+| 告警接收端 | 6 条规则 + Alertmanager 路由；本地实测 webhook 收到 883 字符载荷；`scripts\check-alerting.ps1` 防「引用了不存在的指标」 |
+| 备份定时 | `install-backup-task.ps1` 注册每日 02:00 任务，装完立即触发并验证产出（LastTaskResult=0，130.5 KB） |
+| 定时任务集群 | `job-store-type=jdbc` + Flyway V3；双实例 `QRTZ_SCHEDULER_STATE` 2 行，`sys_job_log` 严格 10 秒一条无重复 |
+| HTTPS | `application-https.yml` + 自签证书，`https://localhost:8443` 实测 200 |
+
+---
 ## 依赖巡检与待处置 PR
 
 Dependabot 只升 **minor / patch**，并把同生态的更新合并成 **1 个 PR**，major 版本一律忽略（需要人工评估的大版本不适合自动开 PR 堆在仓库里）。配置见 `.github/dependabot.yml`。

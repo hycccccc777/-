@@ -112,6 +112,24 @@ spring:
           # #连接池最大阻塞等待时间（使用负值表示没有限制）
           max-wait: -1ms
 
+  # 定时任务：调度状态落库 + 集群模式
+  # 多实例靠 QRTZ_LOCKS 行锁保证同一时刻只有一个节点触发同一个任务
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      # 表由 Flyway 管理（V3__quartz_cluster_tables.sql）
+      # 绝不能让 Spring 每次启动重建：会 DROP 掉调度状态与锁表，集群立即失效
+      initialize-schema: never
+    properties:
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.scheduler.instanceName: campus-scheduler
+      org.quartz.jobStore.tablePrefix: QRTZ_
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.clusterCheckinInterval: 15000
+      org.quartz.jobStore.acquireTriggersWithinLock: true
+      org.quartz.jobStore.misfireThreshold: 12000
+      org.quartz.threadPool.threadCount: 20
+
 # token配置
 token:
   # 令牌自定义标识

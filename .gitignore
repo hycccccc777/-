@@ -67,3 +67,4 @@ backups/
 # 本地 HTTPS 自签证书（含私钥，由 scripts/gen-cert.ps1 生成）
 certs/
 logs-https/
+backups-offsite/

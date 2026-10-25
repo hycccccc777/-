@@ -23,13 +23,13 @@ groups:
           description: "连续 1 分钟抓不到 {{ $labels.instance }} 的 /actuator/prometheus"
 
       - alert: CampusHealthDegraded
-        expr: health{job="campus-shop"} < 1
+        expr: campus_health_status{application="campus-shop"} < 1
         for: 2m
         labels:
           severity: warning
         annotations:
           summary: "健康检查非 UP"
-          description: "实例 {{ $labels.instance }} 健康状态异常，通常是 DB 或 Redis 连接失败"
+          description: "健康状态非 UP（campus_health_status=0），通常是 DB 或 Redis 连接失败"
 
   - name: campus-shop-slo
     rules:

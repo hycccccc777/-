@@ -1,12 +1,20 @@
 package com.ruoyi.quartz.service.impl;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
+import javax.sql.DataSource;
 import jakarta.annotation.PostConstruct;
 import org.quartz.JobDataMap;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.constant.ScheduleConstants;
@@ -25,8 +33,17 @@ import com.ruoyi.quartz.util.ScheduleUtils;
 @Service
 public class SysJobServiceImpl implements ISysJobService
 {
+    private static final Logger log = LoggerFactory.getLogger(SysJobServiceImpl.class);
+
     @Autowired
     private Scheduler scheduler;
+
+    @Autowired
+    private DataSource dataSource;
+
+    /** memory | jdbc：jdbc 即集群模式 */
+    @Value("${spring.quartz.job-store-type:memory}")
+    private String jobStoreType;
 
     @Autowired
     private SysJobMapper jobMapper;
@@ -37,11 +54,48 @@ public class SysJobServiceImpl implements ISysJobService
     @PostConstruct
     public void init() throws SchedulerException, TaskException
     {
+        if (isClusterMode() && anotherInstanceActive())
+        {
+            log.warn("集群模式下已有其他调度实例在线，跳过任务初始化（避免重复触发与触发器抖动）");
+            return;
+        }
         scheduler.clear();
         List<SysJob> jobList = jobMapper.selectJobAll();
         for (SysJob job : jobList)
         {
             ScheduleUtils.createScheduleJob(scheduler, job);
+        }
+    }
+
+    /** JDBC JobStore 即视为集群模式；memory 模式保持原有单机逻辑 */
+    private boolean isClusterMode()
+    {
+        return "jdbc".equalsIgnoreCase(jobStoreType);
+    }
+
+    /**
+     * 是否已有其他调度实例在线。
+     *
+     * <p>Quartz 集群用 QRTZ_SCHEDULER_STATE 记录各节点心跳（默认 15 秒一次）。
+     * 若 60 秒内存在心跳，说明集群里已有节点在跑，本节点不应再 clear() + 重建任务：
+     * clear() 会删掉全部触发器，导致另一节点正在跑的调度抖动甚至漏触发。
+     */
+    private boolean anotherInstanceActive()
+    {
+        try (Connection conn = dataSource.getConnection();
+                PreparedStatement ps = conn.prepareStatement(
+                        "select count(*) from QRTZ_SCHEDULER_STATE where last_checkin_time > ?"))
+        {
+            ps.setLong(1, System.currentTimeMillis() - 60_000L);
+            try (ResultSet rs = ps.executeQuery())
+            {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+        catch (SQLException e)
+        {
+            log.warn("查询 QRTZ_SCHEDULER_STATE 失败，按单实例处理: {}", e.getMessage());
+            return false;
         }
     }
 

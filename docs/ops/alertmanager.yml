@@ -1,0 +1,49 @@
+# Alertmanager 路由与接收端配置
+#
+# 这是"告警接收端"这一环：Prometheus 判断规则是否触发，Alertmanager 负责
+# 分组、抑制、去重，最后推送到人。没有这一段，规则命中也没人知道。
+#
+# 默认推给一个 webhook（便于本地验证：scripts\demo-alert.ps1 会在 5001 端口起接收器）；
+# 生产把 email / 企业微信 / 钉钉 的配置取消注释并填上凭据即可。
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default-webhook
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+  routes:
+    - matchers: ['severity="critical"']
+      receiver: critical-webhook
+      repeat_interval: 30m
+    - matchers: ['severity="warning"']
+      receiver: default-webhook
+
+inhibit_rules:
+  # 服务已经挂了，就不用再挨个报延迟/错误率高（减少噪音）
+  - source_matchers: ['alertname="CampusBackendDown"']
+    target_matchers: ['severity=~"warning|critical"']
+    equal: []
+
+receivers:
+  - name: default-webhook
+    webhook_configs:
+      - url: 'http://host.docker.internal:5001/alerts'
+        send_resolved: true
+        max_alerts: 10
+
+  - name: critical-webhook
+    webhook_configs:
+      - url: 'http://host.docker.internal:5001/alerts'
+        send_resolved: true
+        max_alerts: 10
+    # 邮件通道示例（按需启用）
+    # email_configs:
+    #   - to: 'ops@example.com'
+    #     from: 'alertmanager@example.com'
+    #     smarthost: 'smtp.example.com:587'
+    #     auth_username: 'alertmanager@example.com'
+    #     auth_password: '用环境变量或 secret 注入'
+    #     send_resolved: true

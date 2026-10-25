@@ -1,0 +1,30 @@
+# Prometheus 抓取配置（配合 docker-compose.monitoring.yml 使用）
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    env: local
+
+rule_files:
+  - /etc/prometheus/alert-rules.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+scrape_configs:
+  # 应用指标：QPS / 延迟分布 / JVM / 磁盘 / 健康状态
+  - job_name: campus-shop
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['campus-backend:8080']
+
+  # Alertmanager 自身的告警计数，用于确认"告警真的发出去了"
+  - job_name: alertmanager
+    static_configs:
+      - targets: ['alertmanager:9093']
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
