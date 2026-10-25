@@ -76,6 +76,11 @@ jobs:
           CAMPUS_DB_URL: jdbc:mysql://localhost:3306/shop_test?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=GMT%2B8
         run: node scripts/export-api-contract.mjs
 
+      - name: 覆盖率门禁（campus 行覆盖 >= 35%）
+        # 测试全绿不等于测得够：阈值定在 35%，低于就红，避免"用例越加越水"
+        shell: pwsh
+        run: ./scripts/check-coverage.ps1 -Minimum 35
+
       - name: 上传测试报告
         if: always()
         uses: actions/upload-artifact@v4
@@ -168,7 +173,11 @@ jobs:
 
       - name: 运行 CI 脚本（前端）
         shell: pwsh
-        run: ./RuoYi-Vue-master/RuoYi-Vue-master/scripts/ci.ps1 -SkipBackend -SkipTests -SkipDocker
+        run: ./RuoYi-Vue-master/RuoYi-Vue-master/scripts/ci.ps1 -SkipBackend -SkipDocker
+
+      - name: 依赖漏洞门禁（生产依赖 high/critical）
+        working-directory: 校易淘前端-后端交接-2026-10-19T01-05-57-755Z
+        run: npm audit --omit=dev --audit-level=high
 
       - name: 构建前端镜像
         run: >

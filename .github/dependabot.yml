@@ -1,0 +1,34 @@
+# 依赖漏洞自动巡检（SCA）
+# 为什么用 Dependabot 而不是在 CI 里跑 Trivy：Trivy/OWASP DC 需要拉取漏洞库，
+# 在受限网络下会把构建时间拖到十几分钟甚至失败；Dependabot 由 GitHub 官方
+# 调度，零构建开销，且能直接开 PR 修复。
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/RuoYi-Vue-master/RuoYi-Vue-master"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(deps)"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "npm"
+    directory: "/校易淘前端-后端交接-2026-10-19T01-05-57-755Z"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(deps)"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build(ci)"

@@ -1,0 +1,84 @@
+# 告警规则（Prometheus 通用格式）
+#
+# 指标来源：spring-boot-starter-actuator + micrometer-registry-prometheus
+# 抓取配置示例：
+#   scrape_configs:
+#     - job_name: campus-shop
+#       metrics_path: /actuator/prometheus
+#       static_configs:
+#         - targets: ['backend:8080']
+#
+# 设计原则：只对「用户可感知」的症状告警（错误率高、慢、不可用），
+# 不对单次异常/单条慢 SQL 告警，避免告警疲劳。
+groups:
+  - name: campus-shop-availability
+    rules:
+      - alert: CampusBackendDown
+        expr: up{job="campus-shop"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "校易淘后端不可达"
+          description: "连续 1 分钟抓不到 {{ $labels.instance }} 的 /actuator/prometheus"
+
+      - alert: CampusHealthDegraded
+        expr: health{job="campus-shop"} < 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "健康检查非 UP"
+          description: "实例 {{ $labels.instance }} 健康状态异常，通常是 DB 或 Redis 连接失败"
+
+  - name: campus-shop-slo
+    rules:
+      # 5 分钟 5xx 占比 > 1%
+      - alert: CampusHighErrorRate
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{application="campus-shop", status=~"5.."}[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count{application="campus-shop"}[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "接口 5xx 错误率超过 1%"
+          description: "近 5 分钟错误率超阈值，先看 logs/sys-error.log 与 /actuator/health"
+
+      # P95 延迟 > 500ms
+      - alert: CampusHighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_server_requests_seconds_bucket{application="campus-shop"}[5m])) by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 延迟超过 500ms"
+
+  - name: campus-shop-resources
+    rules:
+      - alert: CampusJvmHeapHigh
+        expr: |
+          sum(jvm_memory_used_bytes{application="campus-shop", area="heap"})
+          / sum(jvm_memory_max_bytes{application="campus-shop", area="heap"}) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM 堆使用率超过 90%"
+          description: "持续高水位可能触发频繁 Full GC，考虑扩容或排查内存泄漏"
+
+      - alert: CampusDiskLow
+        expr: disk_free_bytes{application="campus-shop"} / disk_total_bytes{application="campus-shop"} < 0.1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "磁盘剩余不足 10%"
+          description: "日志与备份写本地盘，注意清理 logs/ 与 backups/"

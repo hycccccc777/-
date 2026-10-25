@@ -63,3 +63,7 @@ $RECYCLE.BIN/
 *.log.1
 # 数据库备份产物（由 scripts/backup.ps1 生成，不入库）
 backups/
+
+# 本地 HTTPS 自签证书（含私钥，由 scripts/gen-cert.ps1 生成）
+certs/
+logs-https/

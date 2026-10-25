@@ -1,0 +1,9 @@
+# 本地验证 HTTPS 用：java -jar ruoyi-admin.jar --spring.profiles.active=druid,https
+# 生产建议在 Nginx / 云负载均衡终止 TLS，应用保持内网 HTTP，证书由 ACME 管理。
+server:
+  port: ${CAMPUS_HTTPS_PORT:8443}
+  ssl:
+    enabled: true
+    key-store: ${CAMPUS_TLS_KEYSTORE:certs/campus-dev.p12}
+    key-store-password: ${CAMPUS_TLS_KEYSTORE_PASSWORD:changeit}
+    key-store-type: PKCS12

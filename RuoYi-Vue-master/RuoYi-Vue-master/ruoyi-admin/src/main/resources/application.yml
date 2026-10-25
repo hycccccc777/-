@@ -8,6 +8,8 @@ campus:
   # 接口限流总开关：测试或压测时可整体关闭
   ratelimit:
     enabled: true
+    # 限流计数后端：memory=进程内（单实例）| redis=跨实例共享（多副本必须用这个）
+    store: ${CAMPUS_RATELIMIT_STORE:memory}
   # 认证：刷新令牌有效期（天）
   auth:
     refresh-token-days: 7
@@ -167,3 +169,23 @@ xss:
   excludes: /system/notice
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
+
+# 指标与健康检查（Prometheus 抓取 /actuator/prometheus）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: campus-shop
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true

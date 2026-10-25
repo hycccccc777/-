@@ -29,6 +29,8 @@ public class AuthenticationEntryPointImpl implements AuthenticationEntryPoint, S
     {
         int code = HttpStatus.UNAUTHORIZED;
         String msg = StringUtils.format("请求访问：{}，认证失败，无法访问系统资源", request.getRequestURI());
-        ServletUtils.renderString(response, JSON.toJSONString(AjaxResult.error(code, msg)));
+        // 必须同时设置 HTTP 状态码：只写 body 里的 code 会让客户端收到 HTTP 200，
+        // 拦截器/网关/CDN 都据此判断成败，前端也只有拿到 401 才会走刷新令牌分支。
+        ServletUtils.renderString(response, JSON.toJSONString(AjaxResult.error(code, msg)), HttpServletResponse.SC_UNAUTHORIZED);
     }
 }

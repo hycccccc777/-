@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import jakarta.servlet.ServletRequest;
+import com.ruoyi.common.constant.HttpStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -138,9 +139,20 @@ public class ServletUtils
      */
     public static void renderString(HttpServletResponse response, String string)
     {
+        renderString(response, string, HttpStatus.SUCCESS);
+    }
+
+    /**
+     * 将字符串渲染到客户端，并指定 HTTP 状态码。
+     *
+     * <p>认证失败必须是 401、无权限是 403：只写响应体里的 code、HTTP 状态却回 200，
+     * 会让网关、CDN、监控和前端拦截器全部误判为成功。
+     */
+    public static void renderString(HttpServletResponse response, String string, int status)
+    {
         try
         {
-            response.setStatus(200);
+            response.setStatus(status);
             response.setContentType("application/json");
             response.setCharacterEncoding("utf-8");
             response.getWriter().print(string);
