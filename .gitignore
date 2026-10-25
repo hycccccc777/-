@@ -68,3 +68,5 @@ backups/
 certs/
 logs-https/
 backups-offsite/
+logs-lb-b/
+logs-instB/

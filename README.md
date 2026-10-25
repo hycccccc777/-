@@ -531,7 +531,51 @@ curl http://localhost:8080/api/v1/products?pageSize=1
 > ? **当前工作区还不是 git 仓库**，CI 只有在推送到 GitHub 后才会生效。建议先 `git init` 并纳入版本管理（`.env`、`node_modules`、`target` 必须进 `.gitignore`）。
 
 ---
-## 十四、尚未实现（诚实说明）
+## 十四、多实例与负载均衡
+
+单实例是最大单点。多实例的前提是三件事必须共享（都已落地）：
+
+| 共享依赖 | 状态 | 实现 |
+| --- | --- | --- |
+| 登录态 / 令牌 | ✅ | 无状态 JWT + 刷新令牌落 Redis |
+| 接口限流 | ✅ | `CAMPUS_RATELIMIT_STORE=redis`，ZSET + Lua 原子计数 |
+| 定时任务 | ✅ | `spring.quartz.job-store-type=jdbc` + QRTZ_LOCKS 行锁 |
+
+### 14.1 容器方式（推荐）
+
+```bat
+docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d --build --scale backend=2 --wait
+:: 统一入口 http://localhost:8088，由 lb 分发到两个 backend
+```
+
+负载均衡配置：`docs/ops/nginx-lb.conf`（`least_conn` + `max_fails=2 fail_timeout=15s` + `keepalive`）。
+
+### 14.2 无 Docker 的本地验证
+
+```powershell
+# 1) 起两个后端（--server.port 区分，CAMPUS_INSTANCE_ID 用于响应头标识）
+启动后端.cmd
+java -jar RuoYi-Vue-master\RuoYi-Vue-master\ruoyi-admin\target\ruoyi-admin.jar --server.port=8082
+
+# 2) 起本地 LB（等价于 nginx 的最小实现）
+node scripts\lb-proxy.mjs --listen 8088 --backends 8080,8082
+
+# 3) 五项断言一次跑完（含杀节点容错）
+powershell -ExecutionPolicy Bypass -File scripts\demo-lb.ps1 -KillNode 8082
+```
+
+预期输出：分流 4/4、令牌跨节点全 200、限流第 11 次起 429、杀掉一个节点后仍可用。
+
+### 14.3 排查技巧
+
+每个响应带 `X-Instance-Id`（取值 `CAMPUS_INSTANCE_ID` 或 `主机名:端口`），一条命令就能看出请求落在哪台机器：
+
+```bat
+curl -s -D - -o NUL http://localhost:8088/api/v1/system/health | findstr X-Instance-Id
+```
+
+---
+## 十五、尚未实现（诚实说明）
 
 - **真实支付**：使用沙箱支付（`POST /api/v1/pay/{payNo}/confirm` 直接置为成功）。接入真实网关需替换为异步回调校验。
 - **配送费**：暂恒为 0，未区分自提 / 配送计费。
@@ -539,7 +583,6 @@ curl http://localhost:8080/api/v1/products?pageSize=1
 - **收藏**：仍为前端本地存储，未服务端化。
 - **商品审核**：新发布商品直接上架（`status=1`），若需审核改为 `0` 并在后台加审核动作。
 - **部分退款 / 售后**：仅支持全额退款；已完成订单不支持售后。
-- **多实例部署**：限流（Redis 共享计数）与定时任务（Quartz JDBC 集群）已就绪，但缺负载均衡与多机部署。
 - **日志集中化**：仅本地文件 + TraceId，未接 Loki / ELK。
 - **熔断降级**：未引入 Resilience4j；限流器对 Redis 故障 fail-open。
 - **静态检查 / E2E**：未接入 Checkstyle / ESLint / Playwright。

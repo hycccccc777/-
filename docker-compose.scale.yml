@@ -1,0 +1,44 @@
+# 多实例 + 负载均衡叠加文件
+#
+# 用法（与根 compose 叠加，复用同一套 MySQL/Redis）：
+#   docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d --build --scale backend=2 --wait
+#
+# 之后统一从 http://localhost:8088 访问，由 lb 分发到两个 backend。
+#
+# 为什么这么拆：根 compose 是「能跑起来的单机形态」，这个文件只增加
+# 「多副本 + 网关」两件事，不改业务配置。区别只在：
+#   * backend 不再直接暴露端口（避免绕过 LB 直连某个节点）
+#   * 新增 lb 服务
+#   * 限流强制切 Redis（多实例下进程内计数会被放大 N 倍）
+name: campus-trade
+
+services:
+  backend:
+    # 覆盖根 compose 的端口映射：内部服务不需要直接对外
+    ports: !reset []
+    environment:
+      CAMPUS_RATELIMIT_STORE: redis
+      # 每个副本一个可读标识，响应头 X-Instance-Id 会带出来，方便验证分流
+      CAMPUS_INSTANCE_ID: ${HOSTNAME}
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 768M
+
+  lb:
+    image: nginx:1.27-alpine
+    container_name: campus-lb
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./docs/ops/nginx-lb.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8088:80"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/lb/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
