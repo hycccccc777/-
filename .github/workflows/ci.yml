@@ -47,7 +47,7 @@ jobs:
           --health-cmd="redis-cli ping"
           --health-interval=10s --health-timeout=5s --health-retries=10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-java@v5
         with:
@@ -111,7 +111,7 @@ jobs:
     name: 容器编排验证
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: 校验 compose 文件语法
         env:
@@ -163,7 +163,7 @@ jobs:
     name: 前端构建与测试
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
