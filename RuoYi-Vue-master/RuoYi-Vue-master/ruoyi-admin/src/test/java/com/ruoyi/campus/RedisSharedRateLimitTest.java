@@ -9,7 +9,6 @@ import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
@@ -23,8 +22,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  *
  * @author campus
  */
-@SpringBootTest
-class RedisSharedRateLimitTest
+class RedisSharedRateLimitTest extends CampusTestSupport
 {
     private static final String PREFIX = "campus:ratelimit:";
 

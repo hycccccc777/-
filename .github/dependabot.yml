@@ -1,7 +1,10 @@
 # 依赖漏洞自动巡检（SCA）
-# 为什么用 Dependabot 而不是在 CI 里跑 Trivy：Trivy/OWASP DC 需要拉取漏洞库，
-# 在受限网络下会把构建时间拖到十几分钟甚至失败；Dependabot 由 GitHub 官方
-# 调度，零构建开销，且能直接开 PR 修复。
+#
+# 为什么用 Dependabot：GitHub 官方调度，零构建开销，能直接开 PR；
+# 把 Trivy/OWASP DC 塞进构建链路要拉漏洞库，在受限网络下会把构建拖到十几分钟。
+#
+# 只升 minor/patch 并合并成单个 PR：major 升级（vite 8、typescript 7 这类）
+# 需要人工评估，不适合自动开 PR 堆在仓库里。需要时手动跑一次即可。
 version: 2
 updates:
   - package-ecosystem: "maven"
@@ -9,26 +12,44 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     commit-message:
       prefix: "build(deps)"
-    labels:
-      - "dependencies"
+    groups:
+      maven-minor:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/校易淘前端-后端交接-2026-10-19T01-05-57-755Z"
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     commit-message:
       prefix: "build(deps)"
-    labels:
-      - "dependencies"
+    groups:
+      npm-minor:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    open-pull-requests-limit: 1
     commit-message:
       prefix: "build(ci)"
+    groups:
+      actions-minor:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
