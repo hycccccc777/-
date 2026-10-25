@@ -70,3 +70,4 @@ logs-https/
 backups-offsite/
 logs-lb-b/
 logs-instB/
+logs-noloki/

@@ -575,7 +575,52 @@ curl -s -D - -o NUL http://localhost:8088/api/v1/system/health | findstr X-Insta
 ```
 
 ---
-## 十五、尚未实现（诚实说明）
+## 十五、日志集中化（Loki）
+
+多实例后日志分散在各节点磁盘，排障要一台台 grep。现在应用直接往 Loki push（`LokiLogAppender`），带结构化字段：`ts / level / logger / traceId / instance / msg`。
+
+### 15.1 启动
+
+```bat
+docker compose -f docker-compose.monitoring.yml up -d loki grafana
+:: Loki http://localhost:3100   Grafana http://localhost:3000
+```
+
+后端启动时注入地址（未配置则该 appender 自动关闭，不影响本机开发与 CI）：
+
+```bat
+set LOKI_URL=http://127.0.0.1:3100/loki/api/v1/push
+set CAMPUS_INSTANCE_ID=node-a
+java -jar RuoYi-Vue-master\RuoYi-Vue-master\ruoyi-admin\target\ruoyi-admin.jar
+```
+
+### 15.2 按 traceId 查全链路
+
+```logql
+{application="campus-shop"} | json | traceId="demo213751"
+```
+
+也可以按实例查：`{application="campus-shop", instance="node-b"}`。
+
+### 15.3 验证脚本
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\demo-logs.ps1
+```
+
+预期：两实例都在上报、traceId 精确召回、失败请求可定位、按实例可分别检索（6 项断言）。
+
+### 15.4 设计取舍
+
+| 决策 | 原因 |
+| --- | --- |
+| 应用主动 push，不用 Promtail 抓文件 | 容器日志在临时卷，抓文件要额外挂载；主动推与部署形态无关 |
+| 有界队列，满则丢最旧 | 日志不该把业务线程堵死或吃光堆；保最近现场 |
+| 推送失败不重试 | Loki 故障时重试会雪崩；只计数并每 30 秒报一次 |
+| 默认关闭 | 不配 `LOKI_URL` 就不启用，本机与 CI 零影响 |
+
+---
+## 十六、尚未实现（诚实说明）
 
 - **真实支付**：使用沙箱支付（`POST /api/v1/pay/{payNo}/confirm` 直接置为成功）。接入真实网关需替换为异步回调校验。
 - **配送费**：暂恒为 0，未区分自提 / 配送计费。
@@ -583,7 +628,6 @@ curl -s -D - -o NUL http://localhost:8088/api/v1/system/health | findstr X-Insta
 - **收藏**：仍为前端本地存储，未服务端化。
 - **商品审核**：新发布商品直接上架（`status=1`），若需审核改为 `0` 并在后台加审核动作。
 - **部分退款 / 售后**：仅支持全额退款；已完成订单不支持售后。
-- **日志集中化**：仅本地文件 + TraceId，未接 Loki / ELK。
 - **熔断降级**：未引入 Resilience4j；限流器对 Redis 故障 fail-open。
 - **静态检查 / E2E**：未接入 Checkstyle / ESLint / Playwright。
 - **本机无 Docker**：容器化由 CI runner 实测（`compose up` + 经 Nginx 冒烟），本机只做静态校验。

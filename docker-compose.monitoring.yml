@@ -54,6 +54,42 @@ services:
       timeout: 5s
       retries: 5
 
+  # 日志集中化：应用通过 LokiLogAppender 直接 push，不需要 Promtail 抓文件
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: campus-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./docs/ops/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: campus-grafana
+    restart: unless-stopped
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_BASIC_ENABLED: "false"
+    volumes:
+      - ./docs/ops/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
+      - prometheus
+
 volumes:
   prometheus-data:
   alertmanager-data:
+  loki-data:
+  grafana-data:

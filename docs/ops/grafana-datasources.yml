@@ -1,0 +1,23 @@
+# Grafana 数据源自动配置：起来就能查，不用手点
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      # 从日志里抽出 traceId 作为字段，便于在 Grafana 里点 traceId 联动查询
+      derivedFields:
+        - datasourceUid: prometheus
+          matcherRegex: '"traceId":"([A-Za-z0-9_-]+)"'
+          name: traceId
+          url: '$${__value.raw}'
