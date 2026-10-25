@@ -13,7 +13,7 @@
     "check:api": "node ../scripts/export-api-contract.mjs --check"
   },
   "dependencies": {
-    "element-plus": "2.5.6",
+    "element-plus": "2.14.7",
     "vue": "^3.5.44"
   },
   "devDependencies": {
