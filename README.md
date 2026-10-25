@@ -10,7 +10,8 @@
 
 | 材料 | 位置 | 内容 |
 | --- | --- | --- |
-| **验收材料汇编（Word/PDF）** | `docs/校易淘-验收材料汇编.docx` / `.pdf` | 13 章 42 页：架构讲解、业务闭环、角色权限、能力对照、压测、覆盖率、可观测、关键难点、AI 使用、总结，14 张截图 |
+| **验收材料汇编（Word/PDF）** | `docs/校易淘-验收材料汇编.docx` / `.pdf` | 13 章 + 附录，53 页：架构讲解、业务闭环、角色权限、能力对照、压测、覆盖率、可观测、关键难点、AI 使用、总结，24 表 14 图 |
+| **答辩问答稿** | `docs/答辩问答稿.md` | 10 个高频问题：结论 → 理由 → 证据 → 边界，附 3 个兜底回答 |
 | 技术栈与开发环境 | `docs/技术栈与开发环境说明.md` | 逐项截图说明语言、平台、数据库、缓存、容器、监控、CI/CD、测试工具 |
 | 企业级能力对照 | `docs/企业级能力对照表.md` | 安全 / 一致性 / 性能 / 可靠性 / 工程化 / 运维，逐项 file:line 证据，未覆盖项如实标注 |
 | 性能压测报告 | `docs/性能压测报告.md` | 实测 QPS、RT 分位、错误率，附复现脚本 |
@@ -18,6 +19,7 @@
 | 接口文档 | `docs/接口文档.md` | 接口清单与约定 |
 | 部署架构 | `docs/screenshots/09-architecture.png` | 分层拓扑图 |
 | 指标与告警 | `docs/ops/alert-rules.yml` | Prometheus 抓取与 5 条告警规则 |
+| 依赖巡检策略 | `.github/dependabot.yml` | 只升 minor/patch 并合并成 1 个 PR，忽略 major |
 | 覆盖率报告 | `docs/screenshots/10-coverage.png` | JaCoCo：业务模块行覆盖 42.9% |
 | 截图总目录 | `docs/screenshots/` | 01~14，含 Swagger、Druid、数据库、CI、指标、多实例、闭环、权限 |
 
@@ -538,3 +540,17 @@ curl http://localhost:8080/api/v1/products?pageSize=1
 - **登录态**：令牌仅存于内存，刷新页面需重新登录（无 refreshToken）。
 - **Docker 未实机验证**：本机无 Docker，容器化与 CI 仅完成静态校验。
 - **无 Git 版本管理**：工作区尚未 git init，CI 暂不生效。
+---
+
+## 依赖巡检与待处置 PR
+
+Dependabot 只升 **minor / patch**，并把同生态的更新合并成 **1 个 PR**，major 版本一律忽略（需要人工评估的大版本不适合自动开 PR 堆在仓库里）。配置见 `.github/dependabot.yml`。
+
+收紧配置后，Dependabot 自动**关闭**了此前开出的 5 个 major PR（vite 8 / typescript 7 / element-plus 2.14 / upload-artifact 7 等），并重新开出两个分组 PR：
+
+| PR | 内容 | CI 状态 | 建议 |
+| --- | --- | --- | --- |
+| #14 | npm minor 组（2 个更新） | 通过 | 可直接合并 |
+| #15 | maven minor 组（10 个更新） | 失败 | 10 个一起升必然有互相冲突，建议关掉或拆成逐个升级 |
+
+> 本次没有合并任何 PR：依赖升级会让交付物与已测基线不一致，应由维护者决定时机。合并 #14 后请跑一遍 `检查服务.cmd` 与 `scripts\demo-business-loop.ps1` 回归。
