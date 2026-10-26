@@ -1,4 +1,4 @@
-<#
+﻿<#
     校易淘 · 统一 CI 脚本
 
     作用：把「编译 → 造测试库 → 跑测试 → 构建」这套流程固化下来，
@@ -34,7 +34,16 @@ $frontendDir = Join-Path $repoRoot '校易淘前端-后端交接-2026-10-19T01-0
 
 # ---------- 环境变量兜底 ----------
 if (-not $env:CAMPUS_DB_USERNAME) { $env:CAMPUS_DB_USERNAME = 'root' }
-if (-not $env:CAMPUS_DB_PASSWORD) { Write-Host '[x] 未设置 CAMPUS_DB_PASSWORD（CI 用 secrets，本地用 .env）' -ForegroundColor Red; exit 1 }
+# 口令只在「需要连库」时才必须：-SkipBackend 的前端任务不碰数据库，不应被这条拦住
+if (-not $SkipBackend -and -not $env:CAMPUS_DB_PASSWORD -and $repoRoot -and (Test-Path (Join-Path $repoRoot '.env'))) {
+    foreach ($line in Get-Content (Join-Path $repoRoot '.env') -Encoding UTF8) {
+        if ($line -match '^\s*CAMPUS_DB_PASSWORD\s*=\s*(.+)$') { $env:CAMPUS_DB_PASSWORD = $Matches[1].Trim(); break }
+    }
+}
+if (-not $SkipBackend -and -not $env:CAMPUS_DB_PASSWORD) {
+    Write-Host '[x] 未设置 CAMPUS_DB_PASSWORD（CI 用环境变量，本地用仓库根 .env）' -ForegroundColor Red
+    exit 1
+}
 if (-not $env:MYSQL_HOST)         { $env:MYSQL_HOST         = '127.0.0.1' }
 
 $testDb = 'shop_test'
@@ -113,10 +122,10 @@ function Resolve-Maven {
     $onPath = Get-Command mvn -ErrorAction SilentlyContinue
     if ($onPath) { return $onPath.Source }
 
-    throw "找不到 Maven。三种解决方式：`n" +
-          "  1) 把 Maven 的 bin 目录加入 PATH`n" +
-          "  2) 设置环境变量 MAVEN_HOME 指向 Maven 安装目录`n" +
-          "  3) 用参数显式指定：-Maven <mvn.cmd 的完整路径>"
+    throw ("找不到 Maven。三种解决方式：`n" +
+           "  1) 把 Maven 的 bin 目录加入 PATH`n" +
+           "  2) 设置环境变量 MAVEN_HOME 指向 Maven 安装目录`n" +
+           "  3) 用参数显式指定：-Maven <mvn.cmd 的完整路径>")
 }
 
 $mvn = Resolve-Maven -Explicit $Maven
