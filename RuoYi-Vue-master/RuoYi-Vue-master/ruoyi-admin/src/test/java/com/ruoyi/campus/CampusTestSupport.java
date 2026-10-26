@@ -25,6 +25,9 @@ import com.ruoyi.common.core.domain.model.LoginUser;
         "spring.datasource.druid.maxActive=30",
         "spring.data.redis.database=4",
         "campus.ratelimit.enabled=false",
+        // 测试里不启动 Quartz：定时任务会在断言之间插入执行（例如超时取消），造成偶发失败。
+        // 需要验证定时逻辑时直接调用 task/service 方法，不依赖真实时钟。
+        "spring.quartz.auto-startup=false",
         "logging.level.root=warn",
         "logging.level.com.ruoyi=warn"
 })

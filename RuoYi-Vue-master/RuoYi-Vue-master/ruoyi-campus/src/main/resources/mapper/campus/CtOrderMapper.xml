@@ -140,4 +140,28 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </foreach>
     </update>
 
+    <!-- 超时未支付：时间比较交给数据库，避免应用与库的时钟/时区偏差 -->
+    <select id="selectTimeoutUnpaidOrderNos" resultType="java.lang.String">
+        select order_no
+        from ct_order
+        where status = '0'
+          and del_flag = '0'
+          and create_time &lt; date_sub(now(), interval #{minutes} minute)
+        order by create_time asc
+        limit #{limit}
+    </select>
+
+    <!-- 条件更新：只有仍为待付款才置为已取消，保证并发/多实例下只成功一次 -->
+    <update id="cancelUnpaidOrder">
+        update ct_order
+        set status = '4',
+            cancel_time = now(),
+            cancel_reason = #{cancelReason},
+            update_by = 'system',
+            update_time = now()
+        where order_no = #{orderNo}
+          and status = '0'
+          and del_flag = '0'
+    </update>
+
 </mapper>

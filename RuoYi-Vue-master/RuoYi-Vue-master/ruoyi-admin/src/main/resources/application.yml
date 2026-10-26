@@ -11,6 +11,13 @@ campus:
   # 支付回调签名密钥：生产/CI 必须用环境变量覆盖（见 .env.example）
   payment:
     notify-secret: '${CAMPUS_PAY_SECRET:}'
+  # 待付款订单超时自动取消：下单不付款会一直占着库存，恶意刷单能把商品锁死。
+  # 定时任务每分钟扫描一次（sys_job: campusOrderTask.cancelTimeoutOrders）。
+  order:
+    # 超时分钟数；设为 0 或负数即关闭
+    timeout-minutes: ${CAMPUS_ORDER_TIMEOUT_MINUTES:30}
+    # 单次最多处理条数，避免一次扫描过重
+    timeout-batch-limit: ${CAMPUS_ORDER_TIMEOUT_BATCH:200}
   # 接口限流总开关：测试或压测时可整体关闭
   ratelimit:
     enabled: true

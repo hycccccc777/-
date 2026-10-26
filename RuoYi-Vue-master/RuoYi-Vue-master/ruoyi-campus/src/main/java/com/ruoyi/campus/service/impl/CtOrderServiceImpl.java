@@ -173,7 +173,6 @@ public class CtOrderServiceImpl implements ICtOrderService
             {
                 throw new ApiException(400, "不能购买自己发布的商品");
             }
-            int qty = item.getQuantity() == null ? 1 : item.getQuantity();
             // 库存不做预检：预检是非锁定快照读，并发下会读到过期数据而误拒本应成功的请求。
             // 库存是否充足一律由 deductStock 的原子条件更新判定（唯一权威）。
             groups.computeIfAbsent(product.getSellerId(), k -> new ArrayList<>()).add(Map.entry(item, product));
@@ -342,6 +341,53 @@ public class CtOrderServiceImpl implements ICtOrderService
         order.setUpdateBy(SecurityUtils.getUsername());
         ctOrderMapper.updateCtOrder(order);
         restoreStock(order);
+    }
+
+    /**
+     * 超时未支付自动取消。
+     *
+     * <p>三个关键点：
+     * <ul>
+     *   <li>候选集用 SQL 的 NOW() 判定，不依赖应用时钟；</li>
+     *   <li>逐单「条件更新」，affected=1 才回滚库存，多实例并发只会成功一次；</li>
+     *   <li>整批一个事务：回滚库存失败则本批全部回退，下一轮重试，不会出现"订单取消了但库存没回来"。</li>
+     * </ul>
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int cancelTimeoutOrders(int timeoutMinutes, int batchLimit)
+    {
+        if (timeoutMinutes <= 0)
+        {
+            return 0;
+        }
+        int limit = batchLimit <= 0 ? 200 : batchLimit;
+        List<String> orderNos = ctOrderMapper.selectTimeoutUnpaidOrderNos(timeoutMinutes, limit);
+        if (orderNos == null || orderNos.isEmpty())
+        {
+            return 0;
+        }
+        int cancelled = 0;
+        for (String orderNo : orderNos)
+        {
+            int affected = ctOrderMapper.cancelUnpaidOrder(orderNo, "超时未支付");
+            if (affected != 1)
+            {
+                // 已被买家取消、或已被另一个实例处理
+                continue;
+            }
+            CtOrder order = ctOrderMapper.selectCtOrderByOrderNo(orderNo);
+            if (order != null)
+            {
+                restoreStock(order);
+            }
+            cancelled++;
+        }
+        if (cancelled > 0)
+        {
+            log.info("超时未支付订单自动取消 {} 笔（阈值 {} 分钟）", cancelled, timeoutMinutes);
+        }
+        return cancelled;
     }
 
     @Override

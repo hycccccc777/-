@@ -49,9 +49,14 @@ scripts\backup.ps1                 :: 数据库备份（需 CAMPUS_DB_PASSWORD�
 ```
 待付款(0) ──支付成功──> 待发货(1) ──卖家发货──> 待收货(2) ──确认收货──> 已完成(3)
    │  └──取消──> 已取消(4)（恢复库存，商品重新上架）
+   │  └──超时未支付（默认 30 分钟）──> 已取消(4)（定时任务自动执行，同样恢复库存）
    └──申请退款──> 退款中(5) ──完成退款──> 已退款(6)（恢复库存）
                     └──卖家拒绝──> 回滚为申请前的状态
 ```
+
+> 超时取消由定时任务 `campusOrderTask.cancelTimeoutOrders()` 每分钟扫描，
+> 阈值 `campus.order.timeout-minutes`（环境变量 `CAMPUS_ORDER_TIMEOUT_MINUTES`，设为 0 可关闭）。
+> 逐单条件更新（`where status='0'`）+ 受影响行数判定，多实例并发扫描只会成功取消一次，库存只回滚一次。
 
 ### 退款单状态机
 
@@ -277,9 +282,9 @@ mvn -pl ruoyi-admin -am test
 mvn -pl ruoyi-admin -am test "-Dtest=StockConcurrencyTest"
 ```
 
-### 现有用例（39 后端 + 19 前端 = 58 个，全部通过）
+### 现有用例（49 后端 + 19 前端 = 68 个，全部通过）
 
-> 数据来源：`ruoyi-admin/target/surefire-reports` 实测 Tests run: 39, Failures: 0, Errors: 0；
+> 数据来源：`ruoyi-admin/target/surefire-reports` 实测 Tests run: 49, Failures: 0, Errors: 0；
 > 前端 `npm test` 实测 `tests 19 / pass 19 / fail 0`。
 
 
@@ -294,8 +299,11 @@ mvn -pl ruoyi-admin -am test "-Dtest=StockConcurrencyTest"
 | `OrderLifecycleTest` | 退款被拒绝 | 订单回滚到申请前状态 |
 | `OrderLifecycleTest` | 退款完成 | 订单转已退款、库存回滚、重新上架 |
 | `OrderLifecycleTest` | 越权防护 | 买家不能发货、他人订单不可见 |
+| `OrderTimeoutTest` | 超过阈值仍未支付 | 自动取消 + 库存回滚 + 记录取消原因 |
+| `OrderTimeoutTest` | 未到阈值 / 已支付 | 不动，库存不被误回滚 |
+| `OrderTimeoutTest` | 单批上限 + 重复执行 | 分批处理、多轮幂等，库存只回滚一次 |
 
-> 上表只列**最能说明问题**的 9 条；完整 39 条见 `surefire-reports`，另有 19 条前端用例（HTTP 层、错误契约、令牌刷新、自动登出）。
+> 上表只列**最能说明问题**的 12 条；完整 49 条见 `surefire-reports`，另有 19 条前端用例（HTTP 层、错误契约、令牌刷新、自动登出）。
 
 ### 演示脚本（可反复跑）
 
@@ -303,6 +311,7 @@ mvn -pl ruoyi-admin -am test "-Dtest=StockConcurrencyTest"
 | --- | --- |
 | `scripts\reset-demo-data.ps1` | 复位演示数据：清订单/支付/幂等/购物车，恢复 8 件商品为「上架、库存 1」 |
 | `scripts\demo-business-loop.ps1` | 业务闭环演示：浏览 → 加购 → 下单（幂等）→ 支付 → 发货 → 收货 |
+| `scripts\demo-order-timeout.ps1` | 待付款超时自动取消演示：下单不付款 → 定时任务取消 → 库存回滚 |
 | `scripts\demo-rbac.ps1` | 角色权限演示：匿名/买家/卖家三种身份的 401、数据隔离、越权 404 |
 | `scripts\_demo-auth.ps1` | 上面两个脚本共用的登录助手：缓存令牌 + 429 等待重试 |
 
@@ -605,7 +614,7 @@ curl http://localhost:8080/api/v1/products?pageSize=1
 | --- | --- | --- |
 | 登录态 / 令牌 | ✅ | 无状态 JWT + 刷新令牌落 Redis |
 | 接口限流 | ✅ | `CAMPUS_RATELIMIT_STORE=redis`，ZSET + Lua 原子计数 |
-| 定时任务 | ✅ | `spring.quartz.job-store-type=jdbc` + QRTZ_LOCKS 行锁 |
+| 定时任务 | ✅ | `spring.quartz.job-store-type=jdbc` + QRTZ_LOCKS 行锁；订单超时取消任务在多实例下只触发一次 |
 
 ### 14.1 容器方式（推荐）
 
@@ -749,6 +758,7 @@ powershell -File scripts\demo-canary.ps1
 | 备份定时 | `install-backup-task.ps1` 注册每日 02:00 任务，装完立即触发并验证产出（LastTaskResult=0，130.5 KB） |
 | 定时任务集群 | `job-store-type=jdbc` + Flyway V3；双实例 `QRTZ_SCHEDULER_STATE` 2 行，`sys_job_log` 严格 10 秒一条无重复 |
 | HTTPS | `application-https.yml` + 自签证书，`https://localhost:8443` 实测 200 |
+| 未支付订单超时取消 | `campusOrderTask.cancelTimeoutOrders()` 每分钟扫描；`OrderTimeoutTest` 5 条用例 + `demo-order-timeout.ps1` 实测下单不付款 15 秒内被取消、库存回滚 |
 
 ---
 ## 依赖巡检与待处置 PR
