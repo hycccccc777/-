@@ -1,27 +1,30 @@
-﻿# 从 docs\校易淘-验收材料汇编.html 重建 docx 与 pdf
+﻿# 从 docs 下的 HTML 源重建 docx 与 pdf
 #
 # 为什么要这个脚本：
-#   汇编的正文源是 docs\校易淘-验收材料汇编.html（纯 HTML，便于 diff 与评审）。
+#   文档的正文源是 HTML（纯文本，便于 diff 与评审）。
 #   Word 导出需要图片用**相对路径 + 短文件名**，直接指向 docs\screenshots\01-swagger-ui.png
 #   这种长名字在部分 WPS 版本里会解析失败，所以导出前把图片摊平到临时目录的 img\NN.png。
 #
 # 用法（需要本机已装 WPS 或 Word）：
 #   powershell -ExecutionPolicy Bypass -File scripts\build-docs.ps1
 #   powershell -ExecutionPolicy Bypass -File scripts\build-docs.ps1 -NoPdf
+#   powershell -ExecutionPolicy Bypass -File scripts\build-docs.ps1 -SourceHtml docs\测试报告.html -OutName 测试报告
 param(
-    [switch] $NoPdf
+    [switch] $NoPdf,
+    [string] $SourceHtml = 'docs\校易淘-验收材料汇编.html',
+    [string] $OutName = '校易淘-验收材料汇编'
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-$srcHtml = Join-Path $repo 'docs\校易淘-验收材料汇编.html'
+$srcHtml = if ([System.IO.Path]::IsPathRooted($SourceHtml)) { $SourceHtml } else { Join-Path $repo $SourceHtml }
 $shots = Join-Path $repo 'docs\screenshots'
 $build = Join-Path $env:TEMP 'campus-docbuild'
 $imgDir = Join-Path $build 'img'
 
 if (-not (Test-Path $srcHtml)) { throw "找不到源文件：$srcHtml" }
 
-Write-Host '=== 重建验收材料汇编 ===' -ForegroundColor Cyan
+Write-Host ('=== 重建：' + $OutName + ' ===') -ForegroundColor Cyan
 
 # ---------- 1) 准备构建目录 ----------
 if (Test-Path $build) { Remove-Item $build -Recurse -Force }
@@ -46,8 +49,8 @@ $buildHtml = Join-Path $build 'doc.html'
 Write-Host ("    图片 " + $count + " 张已摊平到 " + $imgDir)
 
 # ---------- 3) 用 WPS/Word 导出 ----------
-$docx = Join-Path $repo 'docs\校易淘-验收材料汇编.docx'
-$pdf = Join-Path $repo 'docs\校易淘-验收材料汇编.pdf'
+$docx = Join-Path $repo ('docs\' + $OutName + '.docx')
+$pdf = Join-Path $repo ('docs\' + $OutName + '.pdf')
 Remove-Item $docx -Force -ErrorAction SilentlyContinue
 
 $app = $null

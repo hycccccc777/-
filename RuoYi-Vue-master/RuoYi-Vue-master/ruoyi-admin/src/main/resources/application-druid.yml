@@ -44,9 +44,12 @@ spring:
             webStatFilter: 
                 enabled: true
             statViewServlet:
-                enabled: true
-                # 设置白名单，不填则允许所有访问
-                allow:
+                # 默认关闭。Druid 控制台会暴露数据源地址、账号与 SQL 统计，
+                # 默认开启等于给扫描器一个现成的入口（/druid/datasource.json）。
+                # 需要看监控时显式开启：CAMPUS_DRUID_ENABLED=true 再重启。
+                enabled: '${CAMPUS_DRUID_ENABLED:false}'
+                # 开启后仍默认只允许本机；确需远程访问用 CAMPUS_DRUID_ALLOW 追加具体 IP。
+                allow: '${CAMPUS_DRUID_ALLOW:127.0.0.1,::1}'
                 url-pattern: /druid/*
                 # 控制台账号同样不设默认值；未配置则不启用登录（生产建议直接关闭）
                 login-username: '${CAMPUS_DRUID_USERNAME:}'

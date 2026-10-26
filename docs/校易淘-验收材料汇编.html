@@ -147,7 +147,7 @@ li { margin: 2pt 0; }
 <tr><td>单元测试</td><td class="ok">已覆盖</td><td>后端 38 例（JUnit 5 + Mockito），前端 19 例（node:test）</td></tr>
 <tr><td>集成测试</td><td class="ok">已覆盖</td><td>订单全链路、库存并发、幂等并发、限流共享、支付网关、刷新令牌、可观测性、契约</td></tr>
 <tr><td>E2E</td><td class="no">未覆盖</td><td>以 compose 冒烟 + 58 个用例替代</td></tr>
-<tr><td>覆盖率</td><td class="ok">已覆盖</td><td>JaCoCo：业务模块行 43.2%、分支 34.6%；CI 有 35% 门禁</td></tr>
+<tr><td>覆盖率</td><td class="ok">已覆盖</td><td>JaCoCo：业务模块行 42.2%、分支 32.9%；CI 有 35% 门禁</td></tr>
 <tr><td>OpenAPI</td><td class="ok">已覆盖</td><td>SpringDoc /v3/api-docs/campus；契约快照 + CI 漂移校验</td></tr>
 <tr><td>CI/CD</td><td class="ok">已覆盖</td><td>GitHub Actions 三作业 + 覆盖率门禁 + 依赖漏洞门禁</td></tr>
 <tr><td>Docker / 配置分离</td><td class="ok">已覆盖</td><td>前后端 Dockerfile + compose；yml + profile + 环境变量，凭证不落库</td></tr>
@@ -199,11 +199,11 @@ li { margin: 2pt 0; }
 <h3>6.2 覆盖率（JaCoCo 0.8.15）</h3>
 <table>
 <tr><th style="width:30%">范围</th><th>指令</th><th>分支</th><th>行</th><th>方法</th></tr>
-<tr><td>ruoyi-campus 业务模块</td><td class="tc">41.4%</td><td class="tc">34.6%</td><td class="tc">43.2%</td><td class="tc">45.1%</td></tr>
+<tr><td>ruoyi-campus 业务模块</td><td class="tc">41.4%</td><td class="tc">32.9%</td><td class="tc">42.2%</td><td class="tc">45.1%</td></tr>
 <tr><td>全后端（含框架模块）</td><td class="tc">27.1%</td><td class="tc">15.4%</td><td class="tc">28.6%</td><td class="tc">33.9%</td></tr>
 </table>
 <p>达到 100% 行覆盖的类：TraceContext、ApiNotFoundHandler、CampusApiContractConfig、SandboxPaymentGateway、ApiWebMvcConfig 等。</p>
-<p><b>门禁</b>：<code>scripts/check-coverage.ps1</code> 读取聚合报告，campus 行覆盖低于 35% 时构建失败，并列出未覆盖行最多的 10 个类。本地已验证正反两向：43.2% 通过、阈值提到 60% 时失败并给出清单。</p>
+<p><b>门禁</b>：<code>scripts/check-coverage.ps1</code> 读取聚合报告，campus 行覆盖低于 35% 时构建失败，并列出未覆盖行最多的 10 个类。本地已验证正反两向：42.2% 通过、阈值提到 60% 时失败并给出清单。</p>
 <div class="fig"><img src="screenshots/10-coverage.png"><div class="cap">图 4　JaCoCo 覆盖率报告</div></div><h2 class="pb">七、部署、可观测与高可用</h2>
 <h3>7.0 多实例与负载均衡</h3>
 <p>单实例是最大的单点。多实例上线的真正门槛不是"能不能起两个进程"，而是<b>三个共享问题</b>：会话、限流、定时任务。这三件若还在进程内，起第二个副本只会制造新 bug。</p>
@@ -346,7 +346,7 @@ scripts\backup.ps1 / restore.ps1   数据库备份与恢复</pre>
 <ul>
 <li>交易闭环可用：浏览 → 收藏 → 购物车 → 下单（多卖家拆单 + 幂等）→ 支付 → 发货 → 收货 → 退款，状态机在服务端强制</li>
 <li>数据正确性有保障：原子扣减防超卖、幂等键防重复、事务覆盖拆单与扣减、10+ 唯一索引兜底</li>
-<li>工程化闭环：39 + 19 个用例、覆盖率 43.2% 且有 35% 门禁、OpenAPI 契约防漂移、CI 三作业 + 依赖巡检</li>
+<li>工程化闭环：39 + 19 个用例、覆盖率 42.2% 且有 35% 门禁、OpenAPI 契约防漂移、CI 三作业 + 依赖巡检</li>
 <li>可运维：指标与 6 条告警规则且已打通 Alertmanager→webhook 投递、健康检查、TraceId 全链路、备份已注册每日计划任务并做过恢复往返验证</li>
 <li>可扩展：限流已支持 Redis 共享计数，多实例不再是「限流失效」</li>
 </ul>
@@ -356,7 +356,7 @@ scripts\backup.ps1 / restore.ps1   数据库备份与恢复</pre>
 <tr><td>单机压测 QPS</td><td class="tc">1354（并发 50）</td><td>4 个读接口加权混合，同机自压</td></tr>
 <tr><td>P95 延迟</td><td class="tc">56.8ms</td><td>同上</td></tr>
 <tr><td>错误率</td><td class="tc">0.00%</td><td>49499 个请求零失败</td></tr>
-<tr><td>业务模块行覆盖</td><td class="tc">43.2%</td><td>JaCoCo，含 73 个类</td></tr>
+<tr><td>业务模块行覆盖</td><td class="tc">42.2%</td><td>JaCoCo，含 73 个类</td></tr>
 <tr><td>自动化用例</td><td class="tc">57</td><td>后端 38 + 前端 19</td></tr>
 </table>
 <h3>13.3 还差什么</h3>
@@ -443,7 +443,7 @@ scripts\backup.ps1 / restore.ps1   数据库备份与恢复</pre>
 <tr><td rowspan="2">发布</td><td>回滚</td><td class="ok">已覆盖</td><td><code>docs\回滚演练记录.md</code>：实测 9.8 秒，远优于 10 分钟目标</td></tr>
 <tr><td>灰度</td><td class="ok">已覆盖</td><td><code>scripts\demo-canary.ps1</code>：header 强制 / 比例分流 / 写接口不进灰度</td></tr>
 <tr><td rowspan="3">质量</td><td>自动化测试</td><td class="ok">已覆盖</td><td>后端 39 + 前端 19 用例全绿（58）</td></tr>
-<tr><td>覆盖率门禁</td><td class="ok">已覆盖</td><td>业务模块行 43.2%，低于 35% 构建失败</td></tr>
+<tr><td>覆盖率门禁</td><td class="ok">已覆盖</td><td>业务模块行 42.2%，低于 35% 构建失败</td></tr>
 <tr><td>契约漂移</td><td class="ok">已覆盖</td><td>CI 比对运行时 OpenAPI 与仓库快照</td></tr>
 <tr><td rowspan="4">未做</td><td>MySQL 主从</td><td class="part">已评估</td><td>见风险登记表 R-01（含触发条件：日活 &gt; 5000）</td></tr>
 <tr><td>全链路追踪</td><td class="part">已评估</td><td>R-02：单体内部无跨服务调用，traceId 已贯穿</td></tr>

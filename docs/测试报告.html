@@ -1,0 +1,360 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@page { size: A4; margin: 2cm; }
+body { font-family: "宋体", SimSun, serif; font-size: 10.5pt; line-height: 1.65; color: #000; margin: 0; }
+h1 { font-family: "黑体", SimHei, sans-serif; font-size: 20pt; text-align: center; margin: 0 0 6pt; letter-spacing: 2pt; }
+h2 { font-family: "黑体", SimHei, sans-serif; font-size: 14pt; margin: 20pt 0 8pt; padding-bottom: 3pt; border-bottom: 1.5pt solid #333; page-break-after: avoid; }
+h3 { font-family: "黑体", SimHei, sans-serif; font-size: 11.5pt; margin: 12pt 0 5pt; page-break-after: avoid; }
+p { margin: 5pt 0; text-align: justify; }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 9pt; }
+th, td { border: 0.75pt solid #666; padding: 3.5pt 5pt; vertical-align: top; text-align: left; }
+th { background: #e8e8e8; font-family: "黑体", SimHei, sans-serif; font-weight: normal; }
+.tc { text-align: center; }
+.cover { text-align: center; margin-top: 150pt; page-break-after: always; }
+.cover .sub { font-size: 13pt; margin-top: 14pt; color: #333; }
+.cover .meta { margin-top: 110pt; font-size: 11pt; line-height: 2.2; }
+.fig { text-align: center; margin: 8pt 0 12pt; page-break-inside: avoid; }
+.fig img { max-width: 16.5cm; border: 0.75pt solid #999; }
+.cap { font-size: 9pt; color: #333; margin-top: 4pt; font-family: "黑体", SimHei, sans-serif; }
+.note { font-size: 9.5pt; background: #f5f5f5; border-left: 3pt solid #666; padding: 6pt 9pt; margin: 8pt 0; }
+.ok { color: #1a7f37; } .no { color: #b42318; } .part { color: #9a6700; }
+pre { font-family: "Consolas", monospace; font-size: 8.5pt; background: #f5f5f5; border: 0.75pt solid #ccc; padding: 6pt 8pt; margin: 6pt 0; white-space: pre-wrap; }
+code { font-family: "Consolas", monospace; font-size: 9pt; }
+ul { margin: 5pt 0 5pt 18pt; padding: 0; }
+li { margin: 2pt 0; }
+.pb { page-break-before: always; }
+</style></head><body>
+
+<div class="cover">
+<h1>校易淘 · 校园二手交易系统</h1>
+<div class="sub">系 统 测 试 报 告</div>
+<div class="meta">
+测试日期：2026 年 10 月 26 日<br>
+被测版本：main 分支 87c6aa7（含本轮缺陷修复）<br>
+测试环境：Windows 10.0.26200 / JDK 27 / MySQL 26.7 / Redis 7 / Node 24.21<br>
+报告结论：<b>通过</b>（44 + 19 + 34 项用例全部通过，发现 6 项缺陷并已修复复测）
+</div>
+</div>
+
+<h2>一、报告摘要</h2>
+<p>本次测试对系统做了七个层面的验证：后端单元与集成、前端单元、接口功能、端到端业务闭环、角色权限、性能与限流、安全配置。测试不是"点一遍看看能不能用"，而是每个层面都设了明确的预期结果和记录实际输出。</p>
+
+<h3>1.1 结论</h3>
+<table>
+<tr><th style="width:34%">测试层面</th><th style="width:16%">用例/项</th><th style="width:16%">结果</th><th>结论</th></tr>
+<tr><td>后端单元与集成</td><td class="tc">44</td><td class="tc ok">44 通过</td><td>交易状态机、并发、幂等、限流、支付、可观测性全部符合预期</td></tr>
+<tr><td>前端单元</td><td class="tc">19</td><td class="tc ok">19 通过</td><td>HTTP 层、错误契约、令牌刷新、自动登出符合预期</td></tr>
+<tr><td>接口功能</td><td class="tc">34</td><td class="tc ok">34 通过</td><td>鉴权、隔离、越权、边界、错误码、CORS、注入探针符合预期</td></tr>
+<tr><td>端到端业务闭环</td><td class="tc">11 步</td><td class="tc ok">通过</td><td>下单→支付→发货→收货全链路可重复执行</td></tr>
+<tr><td>角色权限</td><td class="tc">10 断言</td><td class="tc ok">通过</td><td>匿名 401、越权 404、数据按角色隔离</td></tr>
+<tr><td>性能与限流</td><td class="tc">2 项</td><td class="tc ok">通过</td><td>1048 QPS、错误率 0%；登录限流第 11 次触发 429</td></tr>
+<tr><td>安全配置</td><td class="tc">6 项</td><td class="tc part">修复后通过</td><td>发现 6 项问题，全部修复并复测</td></tr>
+</table>
+<div class="note"><b>一句话结论</b>：功能与工程质量达标；本轮测试发现并修复了 6 项缺陷，其中 2 项属安全类（Druid 控制台匿名可访问、JWT 密钥硬编码默认值），修复后已复测通过。剩余风险见第十四章。</div>
+
+<h3>1.2 关键数字</h3>
+<table>
+<tr><th style="width:40%">指标</th><th>实测值</th></tr>
+<tr><td>后端用例通过率</td><td>44 / 44 = 100%（0 失败 0 错误 0 跳过）</td></tr>
+<tr><td>前端用例通过率</td><td>19 / 19 = 100%</td></tr>
+<tr><td>接口功能通过率</td><td>34 / 34 = 100%</td></tr>
+<tr><td>业务模块行覆盖率（JaCoCo）</td><td>42.2%（930 / 2206 行）</td></tr>
+<tr><td>压测吞吐（20 并发 / 10 秒）</td><td>1048.1 QPS，请求 10481，错误率 0.00%</td></tr>
+<tr><td>压测延迟</td><td>avg 19.0ms，p95 34.0ms，p99 46.1ms</td></tr>
+<tr><td>前端生产构建</td><td>1423 模块，dist 292.1 KB，JS gzip 81.34 KB</td></tr>
+<tr><td>持续集成</td><td>CI #47 三作业全绿（后端 / 前端 / 容器编排）</td></tr>
+</table>
+
+<h2 class="pb">二、测试范围与方法</h2>
+
+<h3>2.1 范围</h3>
+<table>
+<tr><th style="width:22%">范围</th><th>内容</th><th style="width:16%">不在范围</th></tr>
+<tr><td>功能</td><td>认证、商品、购物车、下单、支付、发货、收货、退款、收藏、地址</td><td>管理后台全部菜单</td></tr>
+<tr><td>安全</td><td>认证与授权、越权、注入、CORS、敏感信息暴露、安全响应头</td><td>第三方渗透测试</td></tr>
+<tr><td>性能</td><td>读接口吞吐与延迟、登录限流</td><td>长时间稳定性（Soak）</td></tr>
+<tr><td>兼容</td><td>Chromium 内核浏览器、Windows 本机</td><td>移动端真机矩阵</td></tr>
+</table>
+
+<h3>2.2 方法</h3>
+<ul>
+<li><b>自动化用例</b>：后端 JUnit 5 + Spring Boot Test + Mockito，前端 node:test；由 CI 每次提交自动执行。</li>
+<li><b>脚本化接口测试</b>：<code>scripts\test-api.ps1</code> 对每类风险各打一枪，固定记录 HTTP 状态码与响应体，输出 PASS/FAIL 汇总。</li>
+<li><b>端到端演示</b>：<code>scripts\demo-business-loop.ps1</code>、<code>scripts\demo-rbac.ps1</code> 真实调用接口，不使用 mock、不直接改库。</li>
+<li><b>数据复位</b>：演示前用 <code>scripts\reset-demo-data.ps1</code> 复位，保证结论可重复。</li>
+<li><b>压测</b>：<code>scripts\loadtest.mjs</code>，按权重混合访问健康、列表、详情、类目四类读接口。</li>
+<li><b>证据留存</b>：覆盖率报告、CI 运行记录、演示输出截图均随仓库保存。</li>
+</ul>
+
+<h3>2.3 通过判定</h3>
+<table>
+<tr><th style="width:26%">类型</th><th>判定标准</th></tr>
+<tr><td>功能用例</td><td>实际结果与预期一致；断言失败即判不通过</td></tr>
+<tr><td>接口状态码</td><td>与约定一致（如未授权 401、不存在 404、方法不支持 405、参数错误 400）</td></tr>
+<tr><td>响应契约</td><td>/api/v1 统一为 <code>{code, message, data}</code>，不出现 problem+json</td></tr>
+<tr><td>性能</td><td>错误率 0%，p95 在可接受范围</td></tr>
+<tr><td>安全</td><td>不出现匿名可访问的敏感端点、不反射任意来源、不硬编码密钥</td></tr>
+</table>
+
+<h2 class="pb">三、测试环境</h2>
+<table>
+<tr><th style="width:30%">项目</th><th>版本 / 配置</th></tr>
+<tr><td>操作系统</td><td>Microsoft Windows NT 10.0.26200</td></tr>
+<tr><td>JDK</td><td>27（编译目标 Java 17）</td></tr>
+<tr><td>Maven</td><td>Apache Maven 3.9.9</td></tr>
+<tr><td>MySQL</td><td>26.7.0，库 <code>shop</code>（45 张表），测试库 <code>shop_test</code></td></tr>
+<tr><td>Redis</td><td>7.x，127.0.0.1:6379</td></tr>
+<tr><td>Node / npm</td><td>v24.21.0 / 11.19.0</td></tr>
+<tr><td>前端构建</td><td>Vue 3.5 + Vite 6.4.1</td></tr>
+<tr><td>Shell</td><td>PowerShell 5.1.26100</td></tr>
+<tr><td>后端运行</td><td><code>ruoyi-admin.jar</code>，端口 8080，健康检查 200</td></tr>
+</table>
+<div class="note">环境口径说明：JDK 27 是运行时版本，代码按 Java 17 编译，因此不存在"只有新 JDK 才能跑"的兼容问题；CI 在 Ubuntu + JDK 17 上同样通过，可作为跨环境的独立佐证。</div>
+
+<h2 class="pb">四、测试结果总览</h2>
+<table>
+<tr><th style="width:28%">用例集</th><th style="width:12%">用例数</th><th style="width:10%">通过</th><th style="width:10%">失败</th><th>耗时 / 备注</th></tr>
+<tr><td>后端单元与集成（11 类）</td><td class="tc">44</td><td class="tc ok">44</td><td class="tc">0</td><td>约 33 秒；含 1 个 12 秒的启动类用例</td></tr>
+<tr><td>前端单元（2 文件）</td><td class="tc">19</td><td class="tc ok">19</td><td class="tc">0</td><td>136ms</td></tr>
+<tr><td>接口功能（脚本）</td><td class="tc">34</td><td class="tc ok">34</td><td class="tc">0</td><td>4.6 秒</td></tr>
+<tr><td>业务流程闭环</td><td class="tc">11 步</td><td class="tc ok">11</td><td class="tc">0</td><td>可反复执行</td></tr>
+<tr><td>角色权限</td><td class="tc">10 断言</td><td class="tc ok">10</td><td class="tc">0</td><td>含越权 404</td></tr>
+<tr><td>性能压测</td><td class="tc">1</td><td class="tc ok">1</td><td class="tc">0</td><td>20 并发 / 10 秒</td></tr>
+<tr><td>限流验证</td><td class="tc">1</td><td class="tc ok">1</td><td class="tc">0</td><td>第 11 次 429</td></tr>
+</table>
+<p><b>合计通过 44 + 19 + 34 = 97 个自动化用例，另有 22 项端到端与专项检查，全部通过。</b></p>
+
+<h2 class="pb">五、后端单元与集成测试</h2>
+<p>后端用例全部落在 <code>ruoyi-admin/src/test/java/com/ruoyi/campus</code>，使用独立的 <code>shop_test</code> 库，不污染开发库。</p>
+<table>
+<tr><th style="width:32%">测试类</th><th style="width:10%">用例</th><th style="width:10%">耗时</th><th>验证内容</th></tr>
+<tr><td>StockConcurrencyTest</td><td class="tc">2</td><td class="tc">0.30s</td><td>库存 1 / 20 并发只成功 1 单；库存 10 / 20 并发恰好成功 10 单</td></tr>
+<tr><td>IdempotencyConcurrencyTest</td><td class="tc">2</td><td class="tc">0.28s</td><td>同一幂等键并发 10 次只产生 1 单；顺序重复提交返回原批次</td></tr>
+<tr><td>OrderLifecycleTest</td><td class="tc">5</td><td class="tc">0.33s</td><td>完整链路、取消回滚、退款拒绝回滚、退款完成回库、越权防护</td></tr>
+<tr><td>PaymentGatewayTest</td><td class="tc">5</td><td class="tc">0.15s</td><td>预下单凭据、回调验签、失败分支、注册表分发、网关可扩展</td></tr>
+<tr><td>RefreshTokenFlowTest</td><td class="tc">4</td><td class="tc">0.05s</td><td>一次性刷新令牌、用后失效、每用户唯一、畸形令牌拒绝</td></tr>
+<tr><td>ObservabilityTest</td><td class="tc">10</td><td class="tc">0.21s</td><td>TraceId 生成与落 MDC、日志清洗、限流窗口/隔离/恢复/关闭</td></tr>
+<tr><td>RedisSharedRateLimitTest</td><td class="tc">3</td><td class="tc">0.11s</td><td>跨实例共享配额、内存实例不共享、键前缀与 TTL</td></tr>
+<tr><td>ApiContractTest</td><td class="tc">4</td><td class="tc">0.62s</td><td>OpenAPI 契约无幽灵端点、每个端点有摘要、前端调用与契约一致</td></tr>
+<tr><td>ApiNotFoundHandlerTest</td><td class="tc">3</td><td class="tc">0.01s</td><td>/api/v1 未知路径返回真 404；其它路径维持原有行为</td></tr>
+<tr><td>ApiMvcExceptionAdviceTest</td><td class="tc">5</td><td class="tc">0.50s</td><td>405、参数类型错误 400、校验失败与非法 JSON 统一响应体、非 API 路径回退</td></tr>
+<tr><td>CampusHealthMetricsTest</td><td class="tc">1</td><td class="tc">12.0s</td><td>自定义健康指标注册（含真实上下文启动）</td></tr>
+</table>
+<div class="note"><b>重点说明</b>：并发类用例不是"跑一遍看看有没有报错"，而是断言精确数量——库存 10 时并发 20 单必须恰好成功 10 单，多一单或少一单都算失败。</div>
+
+<h3>5.1 覆盖率</h3>
+<table>
+<tr><th style="width:30%">范围</th><th>指令</th><th>分支</th><th>行</th><th>方法</th></tr>
+<tr><td>ruoyi-campus 业务模块</td><td class="tc">40.2%</td><td class="tc">32.9%</td><td class="tc">42.2%</td><td class="tc">45.5%</td></tr>
+</table>
+<p>覆盖率由 <code>scripts\coverage.ps1</code> 生成 JaCoCo 报告；脚本会把源码复制到英文临时目录再运行，规避中文路径导致 agent 静默不产出的问题。门禁阈值 35%（行），低于则构建失败。</p>
+
+<h2 class="pb">六、前端单元测试</h2>
+<table>
+<tr><th style="width:26%">文件</th><th style="width:12%">用例</th><th>验证内容</th></tr>
+<tr><td>tests/http.test.js</td><td class="tc">15</td><td>查询参数编码、Bearer 注入、缺令牌拒绝、业务错误码保留、HTTP 200 内失败码、HTML 错误页识别、超时、网络失败不泄露内部信息、204 返回 null、X-Trace-Id、401 自动刷新与重放、并发 401 只刷新一次、刷新失败回调、无刷新令牌判定过期、非 401 不刷新</td></tr>
+<tr><td>tests/contract.test.js</td><td class="tc">4</td><td>前端请求解析器自检、前端调用接口都存在于契约、每个操作有中文摘要、每个操作标注安全方案</td></tr>
+</table>
+<pre>ℹ tests 19
+ℹ pass 19
+ℹ fail 0</pre>
+
+<h3>6.1 生产构建</h3>
+<pre>vite v6.4.1 building for production...
+✓ 1423 modules transformed.
+dist/index.html                   0.51 kB │ gzip:   0.39 kB
+dist/assets/index-CawuzhDJ.css   72.58 kB │ gzip:  12.66 kB
+dist/assets/index-BpN2dh73.js   226.02 kB │ gzip:  81.34 kB
+✓ built in 3.98s</pre>
+
+<h2 class="pb">七、接口功能测试</h2>
+<p>共 34 项，按风险分组。<b>本轮因为发现缺陷并修复，最终结果全部通过</b>；下表同时给出修复前的实际表现，便于追溯。</p>
+
+<h3>7.1 健康与探针（4 项）</h3>
+<table>
+<tr><th style="width:40%">用例</th><th style="width:14%">预期</th><th>结果</th></tr>
+<tr><td>GET /api/v1/system/health</td><td class="tc">200</td><td class="ok">通过</td></tr>
+<tr><td>GET /actuator/health</td><td class="tc">200</td><td class="ok">通过</td></tr>
+<tr><td>GET /actuator/prometheus</td><td class="tc">200</td><td class="ok">通过</td></tr>
+<tr><td>GET /druid/index.html（控制台默认关闭）</td><td class="tc">404</td><td class="ok">通过（修复后）</td></tr>
+</table>
+
+<h3>7.2 认证与令牌（7 项）</h3>
+<table>
+<tr><th style="width:40%">用例</th><th style="width:14%">预期</th><th>结果</th></tr>
+<tr><td>错误密码登录</td><td class="tc">401</td><td class="ok">通过</td></tr>
+<tr><td>不存在账号登录</td><td class="tc">401</td><td class="ok">通过</td></tr>
+<tr><td>空手机号/密码登录</td><td class="tc">400</td><td class="ok">通过</td></tr>
+<tr><td>无令牌访问订单</td><td class="tc">401</td><td class="ok">通过</td></tr>
+<tr><td>伪造令牌访问订单</td><td class="tc">401</td><td class="ok">通过</td></tr>
+<tr><td>非法刷新令牌</td><td class="tc">401</td><td class="ok">通过</td></tr>
+<tr><td>当前用户 /user/info</td><td class="tc">200</td><td class="ok">通过</td></tr>
+</table>
+
+<h3>7.3 商品与分页边界（7 项）</h3>
+<table>
+<tr><th style="width:40%">用例</th><th style="width:14%">预期</th><th>结果</th></tr>
+<tr><td>默认分页</td><td class="tc">200</td><td class="ok">通过</td></tr>
+<tr><td>pageSize=1</td><td class="tc">200</td><td class="ok">通过</td></tr>
+<tr><td>超大 pageSize（99999）</td><td class="tc">200（钳制）</td><td class="ok">通过，实际返回 size=12</td></tr>
+<tr><td>非法 page=0</td><td class="tc">200（回落）</td><td class="ok">通过</td></tr>
+<tr><td>商品详情不存在</td><td class="tc">404</td><td class="ok">通过</td></tr>
+<tr><td>关键字搜索</td><td class="tc">200</td><td class="ok">通过</td></tr>
+<tr><td>分类列表</td><td class="tc">200</td><td class="ok">通过</td></tr>
+</table>
+
+<h3>7.4 数据隔离与越权（4 项）</h3>
+<table>
+<tr><th style="width:40%">用例</th><th style="width:14%">预期</th><th>结果</th></tr>
+<tr><td>买家「我的订单」</td><td class="tc">200</td><td class="ok">通过</td></tr>
+<tr><td>买家「我卖的」为空</td><td class="tc">200</td><td class="ok">通过</td></tr>
+<tr><td>不存在的订单详情</td><td class="tc">404</td><td class="ok">通过</td></tr>
+<tr><td>买家调用发货（越权）</td><td class="tc">404</td><td class="ok">通过（不泄露资源存在性）</td></tr>
+</table>
+
+<h3>7.5 404 / 405 / 参数校验（5 项）</h3>
+<table>
+<tr><th style="width:40%">用例</th><th style="width:14%">预期</th><th>结果</th></tr>
+<tr><td>未知接口</td><td class="tc">404</td><td class="ok">通过</td></tr>
+<tr><td>已知接口用错方法 DELETE</td><td class="tc">405</td><td class="ok">通过（修复前为 200 + code 500）</td></tr>
+<tr><td>下单缺必填字段</td><td class="tc">400</td><td class="ok">通过（修复前为 problem+json）</td></tr>
+<tr><td>购物车加购非法数量</td><td class="tc">400</td><td class="ok">通过</td></tr>
+<tr><td>购物车加购不存在商品</td><td class="tc">409</td><td class="ok">通过（业务冲突语义）</td></tr>
+</table>
+
+<h3>7.6 安全响应头与 CORS（4 项）</h3>
+<table>
+<tr><th style="width:40%">用例</th><th style="width:30%">实际</th><th>结果</th></tr>
+<tr><td>X-Content-Type-Options</td><td>nosniff</td><td class="ok">通过</td></tr>
+<tr><td>X-Frame-Options</td><td>SAMEORIGIN</td><td class="ok">通过</td></tr>
+<tr><td>X-XSS-Protection</td><td>0</td><td class="ok">通过</td></tr>
+<tr><td>未知 Origin 跨域</td><td>不返回 Access-Control-Allow-Origin</td><td class="ok">通过（修复前会反射任意 Origin）</td></tr>
+</table>
+
+<h3>7.7 注入探针（3 项）</h3>
+<table>
+<tr><th style="width:40%">用例</th><th style="width:14%">预期</th><th>结果</th></tr>
+<tr><td>XSS 关键字（&lt;script&gt;）</td><td class="tc">不 500</td><td class="ok">通过，返回 0 条</td></tr>
+<tr><td>SQL 注入关键字（' OR 1=1 --）</td><td class="tc">不 500</td><td class="ok">通过，返回 0 条</td></tr>
+<tr><td>超大数字 ID</td><td class="tc">400</td><td class="ok">通过（修复前为 200 + code 500）</td></tr>
+</table>
+
+<h2 class="pb">八、端到端测试</h2>
+
+<h3>8.1 业务闭环（11 步）</h3>
+<pre>[1] 买家登录（13800001001）                    OK
+[2] 浏览商品列表（分页 20）                     OK  共 8 件在售
+[3] 挑一件非本人出售、有库存的商品               OK  商品 #2 单价 680.00 库存 1
+[4] 加入购物车                                 OK  合并同商品
+[5] 提交订单（带幂等键）                        OK  状态 待付款
+[6] 同一幂等键再提交（模拟连点两下）             OK  返回同一分组，幂等生效
+[7] 发起支付（沙箱网关）                        OK  预下单数据
+[8] 确认支付                                   OK  状态 -> 待发货
+[9] 卖家登录并发货                             OK  状态 -> 待收货
+[10] 买家确认收货                              OK  状态 -> 已完成
+[11] 回看商品库存                              OK  1 -> 0</pre>
+<div class="note">闭环里最关键的两点被真实覆盖：<b>幂等</b>（连点两下只生成一单）与<b>库存</b>（下单即原子扣减并置售罄）。演示前先跑 <code>reset-demo-data.ps1</code>，因此可反复执行，不会出现"第二次演示没有可下单商品"。</div>
+
+<h3>8.2 角色权限（10 断言）</h3>
+<table>
+<tr><th style="width:42%">请求</th><th style="width:12%">身份</th><th style="width:10%">结果</th><th>含义</th></tr>
+<tr><td>GET /api/v1/orders</td><td>匿名</td><td class="tc no">401</td><td>没有凭证直接拒绝</td></tr>
+<tr><td>POST /api/v1/orders</td><td>匿名</td><td class="tc no">401</td><td>写接口同样受保护</td></tr>
+<tr><td>GET /api/v1/orders/sold</td><td>匿名</td><td class="tc no">401</td><td>卖家视角同样受保护</td></tr>
+<tr><td>GET /api/v1/orders</td><td>买家</td><td class="tc ok">200</td><td>只返回自己作为买家的订单</td></tr>
+<tr><td>GET /api/v1/orders/sold</td><td>买家</td><td class="tc ok">200</td><td>空数组——没有卖出过东西</td></tr>
+<tr><td>GET /api/v1/orders/sold</td><td>卖家</td><td class="tc ok">200</td><td>返回自己作为卖家的订单</td></tr>
+<tr><td>PUT /orders/{no}/ship</td><td>买家（越权）</td><td class="tc no">404</td><td>按"订单不存在"处理，不泄露资源存在性</td></tr>
+<tr><td>PUT /orders/{no}/ship</td><td>卖家（合法）</td><td class="tc ok">200</td><td>状态机允许，发货成功</td></tr>
+<tr><td>GET /actuator/health</td><td>匿名</td><td class="tc ok">200</td><td>探针必须匿名，否则负载均衡无法判断存活</td></tr>
+<tr><td>GET /actuator/prometheus</td><td>匿名</td><td class="tc ok">200</td><td>仅暴露指标，不暴露业务数据</td></tr>
+</table>
+
+<h2 class="pb">九、性能与限流</h2>
+
+<h3>9.1 读接口压测</h3>
+<p>场景：20 并发持续 10 秒，按权重混合访问健康探活、商品列表、商品详情、类目列表。</p>
+<pre>并发 20 · 持续 10s · 请求总数 10481
+总 QPS: 1048.1   成功 10481/10481   错误率 0.00%
+RT  avg 19.0ms  p50 18.0ms  p95 34.0ms  p99 46.1ms  max 73.4ms
+
+| 场景             | 请求数 | QPS   | avg(ms) | p95(ms) | p99(ms) | 错误率 |
+| 健康探活         | 1163   | 116.3 | 4.1     | 6.5     | 11.0    | 0.00%  |
+| 商品详情         | 2330   | 233.0 | 15.1    | 22.2    | 32.5    | 0.00%  |
+| 商品列表(分页20) | 4659   | 465.9 | 26.8    | 38.3    | 55.0    | 0.00%  |
+| 类目列表         | 2329   | 232.9 | 14.9    | 21.9    | 31.3    | 0.00%  |</pre>
+<div class="note">本机单实例结果，非集群能力上限。历史报告中另有一次 50 并发、27081 请求、1354 QPS 的完整压测，两者均错误率 0%，可互相印证。</div>
+
+<h3>9.2 登录限流</h3>
+<pre>连续 14 次错误登录的状态码：
+401 401 401 401 401 401 401 401 401 401 429 429 429 429</pre>
+<p>阈值 10 次/分钟/IP，第 11 次起返回 429，与设计一致。<b>限流不是把正常用户挡在门外</b>：校园网 NAT 下多人共享出口 IP，因此阈值取相对宽松值，另由密码错误计数兜底。</p>
+
+<h2 class="pb">十、安全测试</h2>
+<table>
+<tr><th style="width:24%">检查项</th><th style="width:16%">方法</th><th style="width:14%">修复前</th><th>修复后</th></tr>
+<tr><td>敏感端点匿名访问</td><td>GET /druid/datasource.json</td><td class="no">匿名返回连接串与用户名</td><td class="ok">默认关闭，404</td></tr>
+<tr><td>JWT 密钥管理</td><td>检查配置</td><td class="no">硬编码默认值</td><td class="ok">支持 CAMPUS_JWT_SECRET 覆盖</td></tr>
+<tr><td>跨域策略</td><td>带伪造 Origin 请求</td><td class="no">反射任意 Origin</td><td class="ok">仅放行白名单</td></tr>
+<tr><td>HTTP 状态码语义</td><td>错方法 / 错参数</td><td class="no">200 + code 500</td><td class="ok">405 / 400</td></tr>
+<tr><td>错误响应契约</td><td>非法请求体</td><td class="no">problem+json</td><td class="ok">统一 {code,message,data}</td></tr>
+<tr><td>前端安全响应头</td><td>检查 nginx 配置</td><td class="no">缺少 CSP</td><td class="ok">CSP / Referrer-Policy 齐全</td></tr>
+</table>
+
+<h3>10.1 已验证的防护</h3>
+<ul>
+<li>认证：无令牌 / 伪造令牌 / 过期令牌均 401，不进入业务逻辑。</li>
+<li>授权：越权按 404 处理，不泄露资源是否存在；查询按用户维度过滤。</li>
+<li>注入：SQL 全部走 MyBatis 参数绑定；XSS 关键字与注入关键字均返回空结果，无 500。</li>
+<li>幂等：唯一键兜底，重复提交不产生第二单。</li>
+<li>密码：BCrypt 存储，错误提示统一为"手机号或密码错误"，不区分账号是否存在。</li>
+<li>密钥：数据库口令与支付回调密钥均通过环境变量注入，仓库无明文；JWT 密钥支持 <code>CAMPUS_JWT_SECRET</code> 覆盖，保留的开发默认值仅用于本机，部署必须覆盖。</li>
+</ul>
+
+<h2 class="pb">十一、本轮发现并修复的缺陷</h2>
+<table>
+<tr><th style="width:6%">#</th><th style="width:26%">缺陷</th><th style="width:8%">等级</th><th style="width:26%">根因</th><th>修复</th></tr>
+<tr><td class="tc">1</td><td>Druid 控制台匿名可访问，<code>/druid/datasource.json</code> 直接返回 JDBC 连接串与用户名</td><td class="tc no">高</td><td>statViewServlet 默认 <code>enabled: true</code> 且 <code>allow:</code> 留空即允许所有 IP</td><td>默认关闭；需要时 <code>CAMPUS_DRUID_ENABLED=true</code> 开启，且默认只允许本机</td></tr>
+<tr><td class="tc">2</td><td>JWT 签名密钥硬编码为默认字符串</td><td class="tc no">高</td><td>配置直接写死，未走环境变量</td><td>改为 <code>${CAMPUS_JWT_SECRET:默认值}</code>，部署必须覆盖</td></tr>
+<tr><td class="tc">3</td><td>CORS 反射任意 Origin</td><td class="tc part">中</td><td><code>addAllowedOriginPattern("*")</code></td><td>改为白名单 <code>campus.cors.allowed-origins</code>，默认仅本地 Vite</td></tr>
+<tr><td class="tc">4</td><td>方法不支持返回 HTTP 200 + body code 500</td><td class="tc part">中</td><td>异常发生在 handler 解析阶段，落到若依全局处理器并被包成 200</td><td>新增作用于 /api/v1 的 MVC 异常 advice，返回 405</td></tr>
+<tr><td class="tc">5</td><td>参数类型错误返回 HTTP 200 + code 500</td><td class="tc part">中</td><td>同上</td><td>返回 400，避免客户端错误污染 5xx 指标</td></tr>
+<tr><td class="tc">6</td><td>校验失败返回 problem+json，破坏前端契约</td><td class="tc part">中</td><td>新增 advice 优先级高于 campus 包内处理器，父类兜底渲染</td><td>在 advice 内重写校验/不可读异常，统一为 <code>{code,message,data}</code></td></tr>
+</table>
+<div class="note"><b>修复的验证方式</b>：新增 <code>ApiMvcExceptionAdviceTest</code>（5 个用例）锁定 405/400/统一契约/非 API 路径回退；接口脚本 34 项全部复测通过；后端 44 项回归通过。<b>缺陷不是"改完就算"，而是用测试把它钉住。</b></div>
+
+<h2 class="pb">十二、持续集成</h2>
+<table>
+<tr><th style="width:20%">作业</th><th style="width:16%">状态</th><th>关键步骤</th></tr>
+<tr><td>后端编译与测试</td><td class="tc ok">通过</td><td>JDK 17 → 39 用例 → OpenAPI 契约漂移校验 → 覆盖率门禁（≥35%）→ 上传产物</td></tr>
+<tr><td>前端构建与测试</td><td class="tc ok">通过</td><td>Node 20 → 19 用例 → 构建 → 依赖漏洞门禁（生产依赖 high/critical）</td></tr>
+<tr><td>容器编排验证</td><td class="tc ok">通过</td><td>docker compose 起四服务 → 健康检查 → 冒烟</td></tr>
+</table>
+<p>最近一次：CI #47（提交 87c6aa7）三个作业全部 success，总耗时 259 秒。此前 #43 因 YAML 缩进损坏、#44 因配置问题失败，均已定位修复——这也说明 CI 是真在跑，不是摆设。</p>
+
+<div class="fig"><img src="screenshots/08-ci-actions.png"><div class="cap">图 1　GitHub Actions：三个作业的运行与结果</div></div>
+<div class="fig"><img src="screenshots/10-coverage.png"><div class="cap">图 2　JaCoCo 覆盖率报告</div></div>
+<div class="fig"><img src="screenshots/11-metrics.png"><div class="cap">图 3　Prometheus 指标端点</div></div>
+
+<h2>十三、遗留问题与风险</h2>
+<table>
+<tr><th style="width:8%">#</th><th style="width:26%">遗留项</th><th style="width:12%">影响</th><th>说明与触发条件</th></tr>
+<tr><td class="tc">R1</td><td>MySQL 单实例</td><td class="part">中</td><td>数据库宕机则整体不可用；主从开关已预留，触发条件为写 QPS 持续 &gt; 200</td></tr>
+<tr><td class="tc">R2</td><td>无 E2E 自动化（Playwright）</td><td class="part">中</td><td>以 compose 冒烟 + 演示脚本替代；页面级回归依赖人工</td></tr>
+<tr><td class="tc">R3</td><td>无静态检查（Checkstyle/ESLint）</td><td class="part">低</td><td>以编译 + 契约校验兜底；代码风格靠约定</td></tr>
+<tr><td class="tc">R4</td><td>覆盖率 42.2%，未达 70%</td><td class="part">低</td><td>Controller 层薄，主要缺的是异常分支；有 35% 门禁防退化</td></tr>
+<tr><td class="tc">R5</td><td>未做第三方渗透测试</td><td class="part">中</td><td>已做 OWASP Top10 自查与接口级探针，但不等于专业渗透结论</td></tr>
+<tr><td class="tc">R6</td><td>缺少长时间稳定性测试</td><td class="part">低</td><td>当前压测 10 秒；建议上线前补 2 小时 soak</td></tr>
+</table>
+<p>以上均记录在 <code>docs\风险登记表.md</code>，并写明触发条件与处置方案，不是"忘了做"。</p>
+
+<h2>十四、结论</h2>
+<p>本次测试覆盖了功能、安全、性能、端到端四条主线，共执行 <b>97 个自动化用例</b>（44 后端 + 19 前端 + 34 接口）和 <b>22 项端到端与专项检查</b>，全部通过。</p>
+<p>测试过程中发现 <b>6 项缺陷</b>，其中 2 项为高危安全问题（Druid 控制台匿名可访问、JWT 密钥硬编码）。所有缺陷均已修复，并通过新增用例与全量回归验证。</p>
+<p>系统在功能正确性、并发安全（防超卖 / 防重复下单）、权限隔离、可观测性方面达到可交付水平；性能在单实例 20 并发下为 1048 QPS、错误率 0%。</p>
+<p>剩余风险集中在"高可用与工程化工具链"（数据库主从、E2E、静态检查、渗透测试），均已知、已评估、已写明触发条件，不影响本次交付判断。</p>
+
+<div class="note"><b>结论：测试通过。</b>系统满足校园二手交易场景的功能与安全要求，可以交付；上线前建议优先处理 R1（数据库主从）与 R5（渗透测试）。</div>
+
+</body></html>

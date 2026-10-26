@@ -2,6 +2,12 @@
 # 校园二手交易系统自有配置：业务行为开关与凭据注入集中于此。
 # 与第三方库配置（如 token、druid）不同，campus.* 只影响本项目代码。
 campus:
+  # 允许跨域访问的来源：留空表示只允许同源。
+  # 开发/演示默认放行 Vite 的 5174；不要用通配符 ——
+  # 通配符会让任意站点读取本接口的响应，虽然 Bearer 令牌不易被第三方拿到，
+  # 但这属于把防线交给"令牌没泄露"这一假设。
+  cors:
+    allowed-origins: '${CAMPUS_CORS_ORIGINS:http://localhost:5174,http://127.0.0.1:5174}'
   # 支付回调签名密钥：生产/CI 必须用环境变量覆盖（见 .env.example）
   payment:
     notify-secret: '${CAMPUS_PAY_SECRET:}'
@@ -135,7 +141,9 @@ token:
   # 令牌自定义标识
   header: Authorization
   # 令牌密钥
-  secret: abcdefghijklmnopqrstuvwxyz
+  # 默认值仅供本地开发；部署时必须用 CAMPUS_JWT_SECRET 覆盖。
+  # 用默认值上线等于把签发权公开：仓库里能看到密钥的人可以伪造任意用户令牌。
+  secret: ${CAMPUS_JWT_SECRET:abcdefghijklmnopqrstuvwxyz}
   # 令牌有效期（默认30分钟）
   expireTime: 30
 

@@ -2,6 +2,7 @@ package com.ruoyi.framework.config;
 
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.CacheControl;
@@ -50,23 +51,33 @@ public class ResourcesConfig implements WebMvcConfigurer
 
     /**
      * 跨域配置
+     *
+     * <p>来源白名单来自 campus.cors.allowed-origins，默认只放行本地 Vite。
+     * 不再使用 "*" 通配：那会让任意站点读取接口响应，等于把安全寄托在
+     * "令牌不会泄露"上，而不是主动设限。生产若前后端不同域，用
+     * CAMPUS_CORS_ORIGINS 显式列出域名即可。
      */
     @Bean
-    public CorsFilter corsFilter()
+    public CorsFilter corsFilter(@Value("${campus.cors.allowed-origins:}") String allowedOrigins)
     {
         CorsConfiguration config = new CorsConfiguration();
-        // 设置访问源地址
-        config.addAllowedOriginPattern("*");
-        // 设置访问源请求头
+        if (allowedOrigins != null && !allowedOrigins.isBlank())
+        {
+            for (String origin : allowedOrigins.split(","))
+            {
+                String trimed = origin.trim();
+                if (!trimed.isEmpty())
+                {
+                    config.addAllowedOriginPattern(trimed);
+                }
+            }
+        }
         config.addAllowedHeader("*");
-        // 设置访问源请求方法
         config.addAllowedMethod("*");
-        // 有效期 1800秒
+        config.setAllowCredentials(true);
         config.setMaxAge(1800L);
-        // 添加映射路径，拦截一切请求
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-        // 返回新的CorsFilter
         return new CorsFilter(source);
     }
 }
