@@ -255,7 +255,8 @@ Swagger UI、前端页面以及「经前端代理打后端」这条链路，全�
 | 13800001003 | 一颗小橙 | 卖家 | 发布商品 3、6 |
 | 13800001004 | 骑车去看海 | 卖家 | 发布商品 4、7 |
 
-> 登录方式：**手机号 + 密码**（`POST /api/v1/auth/login`）。
+> 登录方式：**手机号 + 密码**（`POST /api/v1/auth/login`）。没有账号可直接在弹窗里 **注册**（`POST /api/v1/auth/register`，注册成功即登录）。
+> 注册账号默认即可发布闲置、下单与收款；如需关闭自助注册，设 `CAMPUS_REGISTER_ENABLED=false`。
 > 注意：`13800001001` 等演示卖家与商品一一对应，测试「卖家中心」时用它登录。
 
 ### 推荐体验路径
@@ -282,9 +283,9 @@ mvn -pl ruoyi-admin -am test
 mvn -pl ruoyi-admin -am test "-Dtest=StockConcurrencyTest"
 ```
 
-### 现有用例（49 后端 + 19 前端 = 68 个，全部通过）
+### 现有用例（53 后端 + 19 前端 = 72 个，全部通过）
 
-> 数据来源：`ruoyi-admin/target/surefire-reports` 实测 Tests run: 49, Failures: 0, Errors: 0；
+> 数据来源：`ruoyi-admin/target/surefire-reports` 实测 Tests run: 53, Failures: 0, Errors: 0；
 > 前端 `npm test` 实测 `tests 19 / pass 19 / fail 0`。
 
 
@@ -302,8 +303,10 @@ mvn -pl ruoyi-admin -am test "-Dtest=StockConcurrencyTest"
 | `OrderTimeoutTest` | 超过阈值仍未支付 | 自动取消 + 库存回滚 + 记录取消原因 |
 | `OrderTimeoutTest` | 未到阈值 / 已支付 | 不动，库存不被误回滚 |
 | `OrderTimeoutTest` | 单批上限 + 重复执行 | 分批处理、多轮幂等，库存只回滚一次 |
+| `RegisterFlowTest` | 注册成功 | 密码 BCrypt 落库、注册后可直接登录 |
+| `RegisterFlowTest` | 昵称缺省 / 重复手机号 / 弱密码 | 默认昵称用后四位；409 拦截重复；400 拦截非法输入且不落库 |
 
-> 上表只列**最能说明问题**的 12 条；完整 49 条见 `surefire-reports`，另有 19 条前端用例（HTTP 层、错误契约、令牌刷新、自动登出）。
+> 上表只列**最能说明问题**的 15 条；完整 53 条见 `surefire-reports`，另有 19 条前端用例（HTTP 层、错误契约、令牌刷新、自动登出）。
 
 ### 演示脚本（可反复跑）
 

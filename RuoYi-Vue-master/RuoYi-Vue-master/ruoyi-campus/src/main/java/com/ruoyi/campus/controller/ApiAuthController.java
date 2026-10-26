@@ -13,6 +13,7 @@ import com.ruoyi.campus.api.ApiException;
 import com.ruoyi.campus.api.ApiResp;
 import com.ruoyi.campus.domain.CtLoginBody;
 import com.ruoyi.campus.domain.CtRefreshBody;
+import com.ruoyi.campus.domain.CtRegisterBody;
 import com.ruoyi.campus.ratelimit.RateLimit;
 import com.ruoyi.campus.service.ICtAuthService;
 import com.ruoyi.common.annotation.Anonymous;
@@ -61,8 +62,29 @@ public class ApiAuthController
     }
 
     /**
-     * 用刷新令牌换取新的访问令牌
+     * 手机号自助注册（注册成功直接返回登录态）
      *
+     * <p>限流比登录更严：注册会写库，且是未登录接口，属于最容易被脚本刷的入口。
+     * 5 次/分钟/IP 足够正常用户试错，又能挡住批量注册。
+     */
+    @Anonymous
+    @RateLimit(permits = 5, seconds = 60, key = "register", scope = RateLimit.Scope.IP)
+    @PostMapping("/auth/register")
+    @Operation(summary = "手机号注册", description = "注册成功返回与登录一致的 token、refreshToken 与用户信息")
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody CtRegisterBody body)
+    {
+        try
+        {
+            return ApiResp.ok(authService.register(body));
+        }
+        catch (ApiException e)
+        {
+            return ApiResp.fail(e.getCode(), e.getMessage());
+        }
+    }
+
+    /**
+     * 用刷新令牌换取新的访问令牌
      * <p>无需登录即可调用（本身持有令牌），且限流更严：攻击者可以拿到
      * 别人的刷新令牌来反复试探，10 次/分钟足以拖垮 Redis。
      */

@@ -23,9 +23,11 @@ campus:
     enabled: true
     # 限流计数后端：memory=进程内（单实例）| redis=跨实例共享（多副本必须用这个）
     store: ${CAMPUS_RATELIMIT_STORE:memory}
-  # 认证：刷新令牌有效期（天）
+  # 认证：刷新令牌有效期（天）与自助注册开关
   auth:
     refresh-token-days: 7
+    # 手机号 + 密码自助注册；对外演示/生产如需关闭，设为 false
+    register-enabled: ${CAMPUS_REGISTER_ENABLED:true}
 
 ruoyi:
   # 名称

@@ -2,6 +2,7 @@ package com.ruoyi.campus.service;
 
 import java.util.Map;
 import com.ruoyi.campus.domain.CtLoginBody;
+import com.ruoyi.campus.domain.CtRegisterBody;
 
 /**
  * 手机号认证 服务层
@@ -17,6 +18,14 @@ public interface ICtAuthService
      * @return 含 token、refreshToken、expiresIn、user 的响应数据
      */
     public Map<String, Object> login(CtLoginBody body);
+
+    /**
+     * 手机号注册，成功后直接返回登录态（与 login 响应结构一致）。
+     *
+     * @param body 注册请求
+     * @return 含 token、refreshToken、expiresIn、user 的响应数据
+     */
+    public Map<String, Object> register(CtRegisterBody body);
 
     /**
      * 获取当前登录用户信息
