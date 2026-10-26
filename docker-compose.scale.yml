@@ -35,6 +35,7 @@ services:
         condition: service_healthy
     volumes:
       - ./docs/ops/nginx-lb.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docs/ops/_proxy_headers.conf:/etc/nginx/conf.d/_proxy_headers.conf:ro
     ports:
       - "8088:80"
     healthcheck:
@@ -42,3 +43,27 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+  # 灰度节点：只在演练时启动
+  #   docker compose -f docker-compose.yml -f docker-compose.scale.yml --profile canary up -d --build
+  # 默认不参与，避免日常部署多跑一个实例
+  backend-canary:
+    profiles: ["canary"]
+    image: campus-trade-backend:latest
+    container_name: campus-backend-canary
+    restart: unless-stopped
+    environment:
+      CAMPUS_RATELIMIT_STORE: redis
+      CAMPUS_INSTANCE_ID: node-canary
+      CAMPUS_DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATASOURCE_DRUID_MASTER_URL: jdbc:mysql://mysql:3306/shop?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=GMT%2B8
+      SPRING_DATA_REDIS_HOST: redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/v1/system/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10

@@ -4,7 +4,7 @@
 campus:
   # 支付回调签名密钥：生产/CI 必须用环境变量覆盖（见 .env.example）
   payment:
-    notify-secret: ${CAMPUS_PAY_SECRET:change-me-in-production}
+    notify-secret: '${CAMPUS_PAY_SECRET:}'
   # 接口限流总开关：测试或压测时可整体关闭
   ratelimit:
     enabled: true

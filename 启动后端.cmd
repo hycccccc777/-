@@ -100,7 +100,20 @@ if errorlevel 1 (
 )
 
 :run
-set "CAMPUS_DB_PASSWORD=qazwsx@134567"
+rem 数据库口令：优先用已存在的环境变量，其次读仓库根的 .env（已 gitignore）
+rem 仓库里不保存任何真实口令；.env 缺失时会明确报错而不是静默用默认值
+if not defined CAMPUS_DB_PASSWORD if exist "%~dp0.env" (
+  for /f "usebackq tokens=1,* delims==" %%a in ("%~dp0.env") do (
+    if /i "%%a"=="CAMPUS_DB_PASSWORD" set "CAMPUS_DB_PASSWORD=%%b"
+  )
+)
+if not defined CAMPUS_DB_PASSWORD (
+  echo.
+  echo [x] 未找到数据库口令。
+  echo     请在仓库根创建 .env，内容一行：CAMPUS_DB_PASSWORD=你的密码
+  echo     模板见 .env.example
+  pause & exit /b 1
+)
 set "LOG_PATH=%~dp0logs"
 if not exist "%LOG_PATH%" mkdir "%LOG_PATH%"
 

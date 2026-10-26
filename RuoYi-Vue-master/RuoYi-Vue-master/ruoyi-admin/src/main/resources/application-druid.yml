@@ -8,8 +8,9 @@ spring:
             master:
                 url: ${CAMPUS_DB_URL:jdbc:mysql://localhost:3306/shop?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=true&serverTimezone=GMT%2B8}
                 username: ${CAMPUS_DB_USERNAME:root}
-                # 凭据一律从环境变量注入；默认值仅供本地开发，生产/CI 由环境覆盖
-                password: ${CAMPUS_DB_PASSWORD:qazwsx@134567}
+                # 凭据只从环境变量注入，不设默认值：缺失即启动失败，避免默认口令被带上生产
+                # 本地开发在仓库根放 .env（已 gitignore），启动脚本会自动加载
+                password: '${CAMPUS_DB_PASSWORD}'
             # 从库数据源
             slave:
                 # 从数据源开关/默认关闭
@@ -47,9 +48,9 @@ spring:
                 # 设置白名单，不填则允许所有访问
                 allow:
                 url-pattern: /druid/*
-                # 控制台管理用户名和密码
-                login-username: ruoyi
-                login-password: 123456
+                # 控制台账号同样不设默认值；未配置则不启用登录（生产建议直接关闭）
+                login-username: '${CAMPUS_DRUID_USERNAME:}'
+                login-password: '${CAMPUS_DRUID_PASSWORD:}'
             filter:
                 stat:
                     enabled: true

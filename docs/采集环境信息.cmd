@@ -2,7 +2,7 @@
 chcp 65001 >nul
 cd /d "%~dp0.."
 
-set "CAMPUS_DB_PASSWORD=qazwsx@134567"
+if not defined CAMPUS_DB_PASSWORD for /f "usebackq tokens=1,* delims==" %%a in ("%~dp0..\.env") do if /i "%%a"=="CAMPUS_DB_PASSWORD" set "CAMPUS_DB_PASSWORD=%%b"
 
 echo ================================================
 echo  校易淘 · 环境与版本采集

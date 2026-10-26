@@ -1,4 +1,4 @@
-﻿<#
+<#
     校易淘 · 统一 CI 脚本
 
     作用：把「编译 → 造测试库 → 跑测试 → 构建」这套流程固化下来，
@@ -34,7 +34,7 @@ $frontendDir = Join-Path $repoRoot '校易淘前端-后端交接-2026-10-19T01-0
 
 # ---------- 环境变量兜底 ----------
 if (-not $env:CAMPUS_DB_USERNAME) { $env:CAMPUS_DB_USERNAME = 'root' }
-if (-not $env:CAMPUS_DB_PASSWORD) { $env:CAMPUS_DB_PASSWORD = 'qazwsx@134567' }
+if (-not $env:CAMPUS_DB_PASSWORD) { Write-Host '[x] 未设置 CAMPUS_DB_PASSWORD（CI 用 secrets，本地用 .env）' -ForegroundColor Red; exit 1 }
 if (-not $env:MYSQL_HOST)         { $env:MYSQL_HOST         = '127.0.0.1' }
 
 $testDb = 'shop_test'

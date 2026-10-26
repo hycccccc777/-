@@ -1,8 +1,8 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [string] $MysqlBin = "",
     [string] $User     = "root",
-    [string] $Password = $(if ($env:CAMPUS_DB_PASSWORD) { $env:CAMPUS_DB_PASSWORD } else { "qazwsx@134567" }),
+    [string] $Password = $env:CAMPUS_DB_PASSWORD,
     [string] $TestDb   = "shop_test",
     [switch] $Keep
 )

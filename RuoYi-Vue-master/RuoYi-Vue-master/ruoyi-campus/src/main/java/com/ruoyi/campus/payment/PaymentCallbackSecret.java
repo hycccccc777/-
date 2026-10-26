@@ -3,6 +3,8 @@ package com.ruoyi.campus.payment;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -19,11 +21,28 @@ import org.springframework.stereotype.Component;
 @Component
 public class PaymentCallbackSecret
 {
+    /** 未配置密钥时的占位值：仅用于本地演示，回调校验会全部失败 */
+    private static final String PLACEHOLDER = "change-me-in-production";
+
+    private static final Logger log = LoggerFactory.getLogger(PaymentCallbackSecret.class);
+
     private final String secret;
 
     public PaymentCallbackSecret(@Value("${campus.payment.notify-secret:change-me-in-production}") String secret)
     {
         this.secret = secret;
+        // 把「配置没改」显式喊出来：不喊的话线上回调会静默失败，
+        // 表现为「用户付了钱但订单不发货」，排查成本极高
+        if (secret == null || secret.isBlank() || PLACEHOLDER.equals(secret))
+        {
+            log.error("支付回调密钥仍为占位值/空值：沙箱演示可用，正式环境必须通过 CAMPUS_PAY_SECRET 注入随机密钥");
+        }
+    }
+
+    /** 是否仍在使用占位密钥，供健康信息或管理端展示 */
+    public boolean isPlaceholder()
+    {
+        return secret == null || secret.isBlank() || PLACEHOLDER.equals(secret);
     }
 
     /**

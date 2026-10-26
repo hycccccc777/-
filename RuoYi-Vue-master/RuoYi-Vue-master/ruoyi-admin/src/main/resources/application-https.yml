@@ -5,5 +5,5 @@ server:
   ssl:
     enabled: true
     key-store: ${CAMPUS_TLS_KEYSTORE:certs/campus-dev.p12}
-    key-store-password: ${CAMPUS_TLS_KEYSTORE_PASSWORD:changeit}
+    key-store-password: ${CAMPUS_TLS_KEYSTORE_PASSWORD}
     key-store-type: PKCS12

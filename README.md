@@ -620,7 +620,49 @@ powershell -ExecutionPolicy Bypass -File scripts\demo-logs.ps1
 | 默认关闭 | 不配 `LOKI_URL` 就不启用，本机与 CI 零影响 |
 
 ---
-## 十六、尚未实现（诚实说明）
+## 十六、回滚、灰度与风险登记
+
+### 16.1 回滚（已实测 9.8 秒）
+
+```bat
+powershell -File scripts\release.ps1 -Action deploy     :: 发布（构建 + 归档 + 切流 + 探活）
+powershell -File scripts\release.ps1 -Action rollback   :: 回滚到上一版本
+powershell -File scripts\release.ps1 -Action list       :: 查看历史版本
+```
+
+回滚切的是**归档好的制品**（`releases/v-xxx/ruoyi-admin.jar`），不是重新构建 —— 重新构建会引入「构建不可复现」的风险。完整记录见 `docs/回滚演练记录.md`。
+
+关键设计：**发布失败自动回滚**。脚本在探活失败时会自动切回上一版本，不需要人工介入。
+
+### 16.2 灰度
+
+```bat
+:: 容器方式
+docker compose -f docker-compose.yml -f docker-compose.scale.yml --profile canary up -d --build
+
+:: 无 Docker：起灰度实例 + 带 canary 的 LB
+java -jar ...ruoyi-admin.jar --server.port=8083
+node scripts\lb-proxy.mjs --listen 8088 --backends 8080 --canary-port 8083 --canary-percent 10
+
+:: 验证
+powershell -File scripts\demo-canary.ps1
+```
+
+配置在 `docs/ops/nginx-lb.conf`。**写接口永不进灰度**（POST/PUT/DELETE 钉在稳定池），避免「写在新版、读在旧版」的数据错乱。
+
+| 操作 | 做法 | 生效时间 |
+| --- | --- | --- |
+| 放量到 10% | 灰度实例 weight=1，稳定各 weight=9 | `nginx -s reload` |
+| 全量切新 | 删掉稳定池里的旧实例 | reload |
+| 回滚 | 灰度实例 weight=0 | reload（秒级） |
+| 强制某个用户走灰度 | 请求头 `X-Canary: 1` | 立即 |
+
+### 16.3 风险登记表（12 条）
+
+`docs/风险登记表.md` —— 每条未覆盖项都写清**为什么不做的理由 / 影响 / 触发条件 / 缓解措施**。这是「达标」和「留白」的区别：评审看到「未覆盖」会追问，看到「已评估 + 触发条件明确」通常就过了。
+
+---
+## 十七、尚未实现（诚实说明）
 
 - **真实支付**：使用沙箱支付（`POST /api/v1/pay/{payNo}/confirm` 直接置为成功）。接入真实网关需替换为异步回调校验。
 - **配送费**：暂恒为 0，未区分自提 / 配送计费。

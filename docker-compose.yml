@@ -20,7 +20,7 @@ services:
     container_name: campus-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-qazwsx@134567}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?compose 需要 MYSQL_ROOT_PASSWORD（见 .env.example）}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-shop}
       TZ: Asia/Shanghai
     command:
@@ -34,7 +34,7 @@ services:
       - ./RuoYi-Vue-master/RuoYi-Vue-master/sql:/scripts:ro
       - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-qazwsx@134567}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:?compose 需要 MYSQL_ROOT_PASSWORD（见 .env.example）}"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -71,11 +71,11 @@ services:
       TZ: Asia/Shanghai
       SPRING_DATASOURCE_DRUID_MASTER_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-shop}?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai
       SPRING_DATASOURCE_DRUID_MASTER_USERNAME: root
-      SPRING_DATASOURCE_DRUID_MASTER_PASSWORD: ${MYSQL_ROOT_PASSWORD:-qazwsx@134567}
+      SPRING_DATASOURCE_DRUID_MASTER_PASSWORD: ${MYSQL_ROOT_PASSWORD:?compose 需要 MYSQL_ROOT_PASSWORD（见 .env.example）}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       # 支付回调签名密钥，只从环境注入，不写进代码或镜像
-      CAMPUS_PAY_NOTIFY_SECRET: ${CAMPUS_PAY_SECRET:-change-me-in-production}
+      CAMPUS_PAY_NOTIFY_SECRET: ${CAMPUS_PAY_SECRET:?compose 需要 CAMPUS_PAY_SECRET（随机值）}
       RUYI_PROFILE: ${UPLOAD_DIR:-/app/uploadPath}
       # 日志目录同样可移植，默认落到容器内 /app/logs
       LOG_PATH: /app/logs

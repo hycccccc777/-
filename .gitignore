@@ -71,3 +71,7 @@ backups-offsite/
 logs-lb-b/
 logs-instB/
 logs-noloki/
+releases/
+logs-a/
+logs-canary*/
+logs-nopass/
