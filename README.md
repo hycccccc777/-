@@ -277,7 +277,11 @@ mvn -pl ruoyi-admin -am test
 mvn -pl ruoyi-admin -am test "-Dtest=StockConcurrencyTest"
 ```
 
-### 现有用例（9 个，全部通过）
+### 现有用例（39 后端 + 19 前端 = 58 个，全部通过）
+
+> 数据来源：`ruoyi-admin/target/surefire-reports` 实测 Tests run: 39, Failures: 0, Errors: 0；
+> 前端 `npm test` 实测 `tests 19 / pass 19 / fail 0`。
+
 
 | 测试类 | 用例 | 验证内容 |
 | --- | --- | --- |
@@ -291,7 +295,25 @@ mvn -pl ruoyi-admin -am test "-Dtest=StockConcurrencyTest"
 | `OrderLifecycleTest` | 退款完成 | 订单转已退款、库存回滚、重新上架 |
 | `OrderLifecycleTest` | 越权防护 | 买家不能发货、他人订单不可见 |
 
+> 上表只列**最能说明问题**的 9 条；完整 39 条见 `surefire-reports`，另有 19 条前端用例（HTTP 层、错误契约、令牌刷新、自动登出）。
+
+### 演示脚本（可反复跑）
+
+| 脚本 | 作用 |
+| --- | --- |
+| `scripts\reset-demo-data.ps1` | 复位演示数据：清订单/支付/幂等/购物车，恢复 8 件商品为「上架、库存 1」 |
+| `scripts\demo-business-loop.ps1` | 业务闭环演示：浏览 → 加购 → 下单（幂等）→ 支付 → 发货 → 收货 |
+| `scripts\demo-rbac.ps1` | 角色权限演示：匿名/买家/卖家三种身份的 401、数据隔离、越权 404 |
+| `scripts\_demo-auth.ps1` | 上面两个脚本共用的登录助手：缓存令牌 + 429 等待重试 |
+
+> **演示前一定要先跑 `reset-demo-data.ps1`。** 演示会真的下单扣库存，跑过一次商品就变成「已售出、库存 0」，
+> 第二次演示会直接卡在「没有可下单的商品」—— 能反复跑才算演示。
+>
+> 演示脚本会复用登录令牌，因为登录限流是 10 次/分钟/IP，一轮演示登录 4 次，连跑两轮就会自己把自己限流。
+> 这个坑的修法是**让脚本复用令牌**，不是把限流阈值调大。
+
 ### 关键正确性设计
+
 
 **库存扣减是单条原子 SQL**，不使用「先查再改写」：
 

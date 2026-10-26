@@ -15,8 +15,12 @@ function Api($method, $path, $body, $token) {
     if ($null -ne $body) { $args['Body'] = ($body | ConvertTo-Json -Depth 6) }
     return Invoke-RestMethod @args
 }
+# 登录走共用助手：缓存令牌 + 429 等待重试
+# 原因：登录限流是 10 次/分钟/IP，反复演示两轮就会自己把自己限流，
+# 脚本报 429 看起来像系统坏了，其实是演示脚本的问题。
+. "$PSScriptRoot\_demo-auth.ps1"
 function Login($phone, $pwd) {
-    return (Api 'Post' '/api/v1/auth/login' @{ phone = $phone; password = $pwd } $null).data
+    return (Get-DemoToken -BaseUrl $BaseUrl -Phone $phone -Password $pwd)
 }
 
 Step '买家登录（13800001001）'
