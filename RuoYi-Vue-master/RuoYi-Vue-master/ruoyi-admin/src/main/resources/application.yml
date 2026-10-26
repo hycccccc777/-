@@ -28,7 +28,9 @@ ruoyi:
   # 版权年份
   copyrightYear: 2026
   # 文件路径 示例（Windows: D:/ruoyi/uploadPath；Linux: /home/ruoyi/uploadPath）
-  profile: D:/ruoyi/uploadPath
+  # 显式用占位符声明，便于容器里由 RUOYI_PROFILE 覆盖；
+  # 否则写死 D:/ 路径在 Linux 容器里会写到奇怪目录，挂载卷失效、图片 404。
+  profile: ${RUOYI_PROFILE:D:/ruoyi/uploadPath}
   # 获取ip地址开关
   addressEnabled: false
   # 验证码类型 math 数字计算 char 字符验证

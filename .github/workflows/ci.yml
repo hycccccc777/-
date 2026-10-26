@@ -114,6 +114,7 @@ jobs:
     env:
       MYSQL_ROOT_PASSWORD: test123456
       CAMPUS_PAY_SECRET: ci-only-not-a-real-secret
+      CAMPUS_JWT_SECRET: ci-only-jwt-secret-not-for-production-use
       CAMPUS_DB_PASSWORD: test123456
     steps:
       - uses: actions/checkout@v5
@@ -156,6 +157,40 @@ jobs:
         run: |
           set -e
           docker compose exec -T backend sh -c 'touch /app/logs/_probe && touch /app/uploadPath/_probe && rm -f /app/logs/_probe /app/uploadPath/_probe && echo "卷可写 OK"'
+
+      - name: 校验密钥与上传目录确实注入容器（防变量名写错）
+        run: |
+          set -e
+          echo "--- 容器内关键变量 ---"
+          docker compose exec -T backend sh -c 'echo "RUOYI_PROFILE=$RUOYI_PROFILE"; echo "JWT_SET=${CAMPUS_JWT_SECRET:+yes}"; echo "PAY_SET=${CAMPUS_PAY_SECRET:+yes}"'
+          # JWT 必须存在且不是仓库里的开发默认值
+          docker compose exec -T backend sh -c 'test -n "$CAMPUS_JWT_SECRET"'
+          docker compose exec -T backend sh -c 'test "$CAMPUS_JWT_SECRET" != "abcdefghijklmnopqrstuvwxyz"'
+          # 支付回调密钥必须存在
+          docker compose exec -T backend sh -c 'test -n "$CAMPUS_PAY_SECRET"'
+          # 上传目录必须指向挂载卷，而不是 D:/ 开头的 Windows 路径
+          docker compose exec -T backend sh -c 'test "$RUOYI_PROFILE" = "/app/uploadPath"'
+          echo "配置注入 OK"
+
+      - name: 校验图片上传真正落到挂载卷
+        run: |
+          set -e
+          TOKEN=$(curl -fsS -X POST http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"phone":"13800001001","password":"admin123"}' \
+            | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["token"])')
+          printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' | base64 -d > /tmp/probe.png
+          RESP=$(curl -fsS -H "Authorization: Bearer $TOKEN" -F "file=@/tmp/probe.png" http://localhost:8080/api/v1/upload)
+          echo "上传响应: $RESP"
+          URL=$(echo "$RESP" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["url"])')
+          REL=${URL#/profile/}
+          echo "--- 容器内 /app/uploadPath 下实际文件 ---"
+          docker compose exec -T backend sh -c "ls -l /app/uploadPath/$REL"
+          # 反证：不应写到 /app/D:/ruoyi/uploadPath（变量名写错时的典型落点）
+          if docker compose exec -T backend sh -c "test -e '/app/D:/ruoyi/uploadPath'"; then
+            echo "上传目录覆盖失败：文件写到 /app/D:/ruoyi/uploadPath"; exit 1
+          fi
+          echo "上传落盘 OK"
 
       - name: 收集日志
         if: always()

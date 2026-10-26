@@ -74,9 +74,16 @@ services:
       SPRING_DATASOURCE_DRUID_MASTER_PASSWORD: ${MYSQL_ROOT_PASSWORD:?compose 需要 MYSQL_ROOT_PASSWORD（见 .env.example）}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      # 支付回调签名密钥，只从环境注入，不写进代码或镜像
-      CAMPUS_PAY_NOTIFY_SECRET: ${CAMPUS_PAY_SECRET:?compose 需要 CAMPUS_PAY_SECRET（随机值）}
-      RUYI_PROFILE: ${UPLOAD_DIR:-/app/uploadPath}
+      # 支付回调签名密钥，只从环境注入，不写进代码或镜像。
+      # 变量名必须与程序读取的键一致（application.yml: campus.payment.notify-secret -> CAMPUS_PAY_SECRET），
+      # 否则容器里读到空值，回调验签形同虚设。
+      CAMPUS_PAY_SECRET: ${CAMPUS_PAY_SECRET:?compose 需要 CAMPUS_PAY_SECRET（随机值）}
+      # JWT 签名密钥，同样必须覆盖。不传则回落到仓库里的开发默认值，
+      # 等于把令牌签发权公开，任何人可伪造任意用户。
+      CAMPUS_JWT_SECRET: ${CAMPUS_JWT_SECRET:?compose 需要 CAMPUS_JWT_SECRET（随机长串）}
+      # 上传目录：键名是 RUOYI_PROFILE（对应 ruoyi.profile）。
+      # 少写一个 O 就覆盖不到，容器会往 D:/ruoyi/uploadPath 这种路径写，挂的卷白挂。
+      RUOYI_PROFILE: ${UPLOAD_DIR:-/app/uploadPath}
       # 日志目录同样可移植，默认落到容器内 /app/logs
       LOG_PATH: /app/logs
     volumes:
