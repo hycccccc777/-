@@ -14,8 +14,9 @@ name: campus-trade
 
 services:
   backend:
-    # 覆盖根 compose 的端口映射：内部服务不需要直接对外
-    ports: !reset []
+    # 注：这里不加 ports 覆盖。compose 的 !reset 语法需要 v2.24+，为兼容性起见
+    # 保留根 compose 的 8080 映射（便于直接调某个实例排查）。
+    # 对外统一入口仍然是 lb 的 8088，绕过 LB 直连只用于排障。
     environment:
       CAMPUS_RATELIMIT_STORE: redis
       # 每个副本一个可读标识，响应头 X-Instance-Id 会带出来，方便验证分流

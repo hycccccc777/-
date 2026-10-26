@@ -26,8 +26,8 @@ jobs:
     services:
       mysql:
         image: mysql:8.4
-    env:
-      MYSQL_ROOT_PASSWORD: test123456
+        env:
+          MYSQL_ROOT_PASSWORD: test123456
           TZ: Asia/Shanghai
         ports:
           - 3306:3306
@@ -60,9 +60,9 @@ jobs:
 
       - name: 运行 CI 脚本（后端）
         shell: pwsh
-    env:
+        env:
           CAMPUS_DB_USERNAME: root
-      CAMPUS_DB_PASSWORD: test123456
+          CAMPUS_DB_PASSWORD: test123456
         run: ./RuoYi-Vue-master/RuoYi-Vue-master/scripts/ci.ps1 -SkipFrontend -SkipDocker
 
       - name: 校验接口契约无漂移
@@ -70,9 +70,9 @@ jobs:
         # 加了接口忘了更新快照、或改了路径没同步前端，都会在此失败。
         working-directory: .
         shell: pwsh
-    env:
+        env:
           CAMPUS_DB_USERNAME: root
-      CAMPUS_DB_PASSWORD: test123456
+          CAMPUS_DB_PASSWORD: test123456
           CAMPUS_DB_URL: jdbc:mysql://localhost:3306/shop_test?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=GMT%2B8
         run: node scripts/export-api-contract.mjs
 
@@ -110,9 +110,7 @@ jobs:
   compose:
     name: 容器编排验证
     runs-on: ubuntu-latest
-    # 这些值只在 runner 内的一次性容器里有效，job 结束即销毁。
-    # 必须显式给：docker-compose.yml 的变量是必填语法，缺一个就报错退出
-    # （刻意如此 —— 防止默认口令被带上生产）。
+    # 仅 runner 内一次性容器使用，job 结束即销毁；必须给，因为 compose 用的是必填语法
     env:
       MYSQL_ROOT_PASSWORD: test123456
       CAMPUS_PAY_SECRET: ci-only-not-a-real-secret
@@ -121,7 +119,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: 校验 compose 文件语法
-    env:
+        env:
           COMPOSE_PROJECT_NAME: campus-trade
         run: docker compose config --quiet && echo "compose 语法正确"
 
