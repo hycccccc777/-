@@ -91,6 +91,9 @@ services:
       # 前端域名白名单、支付方式、短信与对象存储（详见 .env.example）
       CAMPUS_CORS_ORIGINS: ${CAMPUS_CORS_ORIGINS:-}
       CAMPUS_PAY_METHOD: ${CAMPUS_PAY_METHOD:-4}
+      # 首次上线自动把 admin 默认密码改为该值（仅当 admin 仍是默认密码时生效）
+      CAMPUS_ADMIN_PASSWORD: ${CAMPUS_ADMIN_PASSWORD:-}
+      CAMPUS_ADMIN_FORCE_RESET: ${CAMPUS_ADMIN_FORCE_RESET:-false}
       CAMPUS_SMS_ENABLED: ${CAMPUS_SMS_ENABLED:-false}
       CAMPUS_SMS_PROVIDER: ${CAMPUS_SMS_PROVIDER:-log}
       TENCENT_SMS_SECRET_ID: ${TENCENT_SMS_SECRET_ID:-}

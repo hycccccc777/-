@@ -30,6 +30,16 @@ JWT="$(getenv CAMPUS_JWT_SECRET)"
 DBP="$(getenv MYSQL_ROOT_PASSWORD)"
 is_placeholder "$DBP" && fail "MYSQL_ROOT_PASSWORD 未设置"
 
+# 管理员初始密码：为空则自动生成并回填 .env（admin 仍为默认密码时由后端应用）
+ADMIN_PWD="$(getenv CAMPUS_ADMIN_PASSWORD)"
+if [ -z "$ADMIN_PWD" ]; then
+  ADMIN_PWD="$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 16)"
+  printf '\nCAMPUS_ADMIN_PASSWORD=%s\n' "$ADMIN_PWD" >> .env
+  green "已生成管理员初始密码并写入 .env"
+elif [ ${#ADMIN_PWD} -lt 8 ]; then
+  fail "CAMPUS_ADMIN_PASSWORD 少于 8 位"
+fi
+
 PAY_METHOD="$(getenv CAMPUS_PAY_METHOD)"; PAY_METHOD="${PAY_METHOD:-4}"
 PAY_SECRET="$(getenv CAMPUS_PAY_SECRET)"
 if [ "$PAY_METHOD" != "4" ] && is_placeholder "$PAY_SECRET"; then
@@ -70,9 +80,20 @@ for i in $(seq 1 60); do
 done
 [ "$ready" = "1" ] || { yellow "后端 90 秒未就绪，执行 docker compose logs backend 查看"; exit 1; }
 
+if [ "$(getenv CAMPUS_CLEAN_DEMO)" != "false" ]; then
+  echo "== 清理演示数据 =="
+  DB="$(getenv MYSQL_DATABASE)"; DB="${DB:-shop}"
+  if docker compose exec -T mysql mysql -uroot "-p$DBP" "$DB" < scripts/clean-demo.sql; then
+    green "演示卖家/商品已清理"
+  else
+    yellow "清理演示数据失败，可稍后手动执行 scripts/clean-demo.sql"
+  fi
+fi
+
 FE="$(getenv FRONTEND_PORT)"; FE="${FE:-5174}"
 green "==== 上线完成 ===="
 echo "  本机访问： http://127.0.0.1:$FE"
 echo "  公网访问： 配置域名 + HTTPS 反代到 $FE（见 docs/上线部署.md）"
 echo "  支付方式： 线下面交"
+echo "  管理员：   admin / $ADMIN_PWD"
 echo "  关闭：     docker compose down"

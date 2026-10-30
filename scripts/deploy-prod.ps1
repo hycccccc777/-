@@ -46,6 +46,19 @@ if ($jwtBad) { Fail "CAMPUS_JWT_SECRET 必须是 >=32 位随机串（openssl ran
 $dbPwd = Get-Env "MYSQL_ROOT_PASSWORD"
 if (Test-Placeholder $dbPwd) { Fail "MYSQL_ROOT_PASSWORD 未设置" }
 
+# 管理员初始密码：为空则自动生成并回填 .env（仅在 admin 仍为默认密码时由后端应用）
+$adminPwd = Get-Env "CAMPUS_ADMIN_PASSWORD"
+if ([string]::IsNullOrWhiteSpace($adminPwd)) {
+    $chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
+    $adminPwd = -join (1..16 | ForEach-Object { $chars[(Get-Random -Maximum $chars.Length)] })
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::AppendAllText((Join-Path (Get-Location) ".env"), "`r`nCAMPUS_ADMIN_PASSWORD=$adminPwd`r`n", $utf8NoBom)
+    $envMap["CAMPUS_ADMIN_PASSWORD"] = $adminPwd
+    Ok "已生成管理员初始密码并写入 .env（上线后会打印）"
+} elseif ($adminPwd.Length -lt 8) {
+    Fail "CAMPUS_ADMIN_PASSWORD 少于 8 位，请改长一点"
+}
+
 $payMethod = Get-Env "CAMPUS_PAY_METHOD" "4"
 $paySecret = Get-Env "CAMPUS_PAY_SECRET"
 $payMissing = Test-Placeholder $paySecret
@@ -107,12 +120,23 @@ if (-not $ready) {
     exit 1
 }
 
+# 清理演示卖家与演示商品（默认开；CAMPUS_CLEAN_DEMO=false 可关）
+if ((Get-Env "CAMPUS_CLEAN_DEMO" "true") -ne "false") {
+    Write-Host "`n== 清理演示数据 ==" -ForegroundColor Cyan
+    $db = Get-Env "MYSQL_DATABASE" "shop"
+    try {
+        Get-Content "scripts\clean-demo.sql" -Raw | & docker compose exec -T mysql mysql -uroot ("-p" + $dbPwd) $db | Out-Null
+        if ($LASTEXITCODE -eq 0) { Ok "演示卖家/商品已清理" } else { Warn "清理演示数据返回非 0，可稍后手动执行 scripts\clean-demo.sql" }
+    } catch { Warn "清理演示数据失败：$($_.Exception.Message)" }
+}
+
 $fePort = Get-Env "FRONTEND_PORT" "5174"
 Write-Host "`n==== 上线完成 ====" -ForegroundColor Green
 Write-Host ("  本机访问：  http://127.0.0.1:{0}" -f $fePort)
 Write-Host  "  公网访问：  配置域名 + HTTPS 反向代理到本机 $fePort（详见 docs/上线部署.md）"
 Write-Host  "  支付方式：  线下面交（买家线下付款后确认）"
+Write-Host ("  管理员账号： admin / {0}" -f $adminPwd)
 Write-Host  "  健康检查：  已通过 /api/v1/config"
-Write-Host  ""
+Write-Host ""
 Write-Host  "  如需关闭：  docker compose down"
 Read-Host "按回车关闭窗口" | Out-Null
