@@ -1,10 +1,12 @@
 # 统一换行策略，避免「在我机器上是 LF，在你机器上是 CRLF」这类噪音
 * text=auto eol=lf
 
-# Windows 脚本必须保持 CRLF，否则 cmd 下可能无法正常解析
-*.bat text eol=crlf
-*.cmd text eol=crlf
-*.ps1 text eol=crlf
+# Windows 脚本：必须原样保存 CRLF + UTF-8 BOM。
+# 不能写 text（git 的 text 转换会把 UTF-8 BOM 剥掉，PowerShell 5.1 读无 BOM 的
+# 含中文脚本会按 ANSI 解析，报 Unexpected token），所以按二进制 -text 原样存储。
+*.bat -text
+*.cmd -text
+*.ps1 -text
 
 # Shell 脚本与容器配置统一 LF
 *.sh text eol=lf
