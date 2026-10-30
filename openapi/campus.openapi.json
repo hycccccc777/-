@@ -10,7 +10,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:8080",
+      "url": "http://localhost:18080",
       "description": "Generated server url"
     }
   ],
@@ -1291,7 +1291,7 @@
           "系统配置"
         ],
         "summary": "运行期配置",
-        "description": "短信开关、默认支付方式、注册开关",
+        "description": "短信开关、默认支付方式、注册开关、是否演示模式",
         "operationId": "config",
         "responses": {
           "200": {

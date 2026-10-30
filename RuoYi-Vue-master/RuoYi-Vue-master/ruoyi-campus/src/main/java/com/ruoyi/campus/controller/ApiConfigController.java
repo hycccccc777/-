@@ -32,15 +32,20 @@ public class ApiConfigController
     @Value("${campus.auth.register-enabled:true}")
     private boolean registerEnabled;
 
+    /** 演示模式：为 true 时前端才显示内置演示账号提示；生产应关闭。 */
+    @Value("${campus.demo-mode:true}")
+    private boolean demoMode;
+
     @Anonymous
     @GetMapping("/config")
-    @Operation(summary = "运行期配置", description = "短信开关、默认支付方式、注册开关")
+    @Operation(summary = "运行期配置", description = "短信开关、默认支付方式、注册开关、是否演示模式")
     public ResponseEntity<Map<String, Object>> config()
     {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("smsEnabled", smsEnabled);
         data.put("payMethod", payMethod);
         data.put("registerEnabled", registerEnabled);
+        data.put("demoMode", demoMode);
         return ApiResp.ok(data);
     }
 }

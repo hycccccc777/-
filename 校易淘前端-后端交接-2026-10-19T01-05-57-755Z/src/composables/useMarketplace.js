@@ -63,6 +63,7 @@ const smsEnabled = ref(false)
 const smsSending = ref(false)
 const smsCountdown = ref(0)
 const payMethod = ref('0')
+const demoMode = ref(false)
 const address = ref('')
 const receiver = ref('')
 const contact = ref('')
@@ -527,6 +528,7 @@ async function loadRuntimeConfig() {
     const cfg = await configApi()
     smsEnabled.value = !!cfg?.smsEnabled
     if (cfg?.payMethod) payMethod.value = String(cfg.payMethod)
+    demoMode.value = cfg?.demoMode === true
   } catch (e) {
     // 配置接口失败时保持默认：不发短信、沙箱支付
   }
@@ -695,5 +697,5 @@ async function submitOrder() {
   }
 }
 
-return { categories, schools, page, keyword, category, school, condition, sort, detail, detailOpen, loginOpen, publishOpen, checkoutOpen, loginPhone, loginPassword, loginLoading, loginError, authMode, registerPhone, registerNickname, registerPassword, registerConfirm, registerLoading, registerError, registerSmsCode, smsEnabled, smsSending, smsCountdown, sendSmsCode, payMethod, resetAuthForm, address, receiver, contact, remark, submittingOrder, publish, publishImage, publishUploading, uploadPublishImage, user, isAdmin, favorites, orders, displayProducts, displayTotal, listLoading, listError, hasMore, loadMore, refreshList, cartProducts, selectedItems, total, allSelected, myProducts, money, toggleFavorite, addCart, removeCart, updateQty, selectItem, toggleAll, loadCart, loadOrders, cancelOrder, payOrder, confirmReceive, applyRefund, payingOrder, loadSellerCenter, sellerTab, sellerProducts, sellerOrders, sellerRefunds, sellerLoading, toggleProductStatus, removeMyProduct, shipOrder, agreeRefund, completeRefund, rejectRefund, resetFilters, navigate, search, submitLogin, submitRegister, logout, openPublish, submitPublish, startCheckout, submitOrder, adminTab, adminProducts, adminUsers, adminLoading, loadAdminCenter, approveProduct, rejectProduct }
+return { categories, schools, page, keyword, category, school, condition, sort, detail, detailOpen, loginOpen, publishOpen, checkoutOpen, loginPhone, loginPassword, loginLoading, loginError, authMode, registerPhone, registerNickname, registerPassword, registerConfirm, registerLoading, registerError, registerSmsCode, smsEnabled, smsSending, smsCountdown, sendSmsCode, payMethod, demoMode, resetAuthForm, address, receiver, contact, remark, submittingOrder, publish, publishImage, publishUploading, uploadPublishImage, user, isAdmin, favorites, orders, displayProducts, displayTotal, listLoading, listError, hasMore, loadMore, refreshList, cartProducts, selectedItems, total, allSelected, myProducts, money, toggleFavorite, addCart, removeCart, updateQty, selectItem, toggleAll, loadCart, loadOrders, cancelOrder, payOrder, confirmReceive, applyRefund, payingOrder, loadSellerCenter, sellerTab, sellerProducts, sellerOrders, sellerRefunds, sellerLoading, toggleProductStatus, removeMyProduct, shipOrder, agreeRefund, completeRefund, rejectRefund, resetFilters, navigate, search, submitLogin, submitRegister, logout, openPublish, submitPublish, startCheckout, submitOrder, adminTab, adminProducts, adminUsers, adminLoading, loadAdminCenter, approveProduct, rejectProduct }
 }
