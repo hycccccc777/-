@@ -56,6 +56,18 @@ public interface ICtProductService
      */
     public int removeMyProduct(Long userId, Long productId);
 
+    /**
+     * 管理员审核商品：通过则上架，驳回则置为已驳回并记录原因。
+     *
+     * <p>只允许审核「待审核(0)」状态的商品，避免重复审核已上架/已售出的商品。
+     *
+     * @param productId 商品ID
+     * @param approve   true=通过，false=驳回
+     * @param remark    驳回原因（通过时可空）
+     * @return 受影响行数
+     */
+    public int auditProduct(Long productId, boolean approve, String remark);
+
     public int insertCtProduct(CtProduct ctProduct);
 
     public int updateCtProduct(CtProduct ctProduct);

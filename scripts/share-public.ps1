@@ -26,6 +26,14 @@ function Test-Up($port, $path) {
     } catch { return $false }
 }
 
+function Test-LanUp($port, $path, $ip) {
+    if (-not $ip) { return $false }
+    try {
+        $r = Invoke-WebRequest -Uri ("http://${ip}:$port$path") -UseBasicParsing -TimeoutSec 4
+        return ($r.StatusCode -eq 200)
+    } catch { return $false }
+}
+
 function Wait-Up($port, $path, $seconds) {
     for ($i = 0; $i -lt $seconds; $i++) {
         if (Test-Up $port $path) { return $true }
@@ -35,12 +43,34 @@ function Wait-Up($port, $path, $seconds) {
 }
 
 function Get-LanIp {
-    # 取有默认网关的那块网卡地址，避免拿到 169.254.x 这类无意义地址
     $c = Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -and $_.IPv4Address } | Select-Object -First 1
     if ($c) { return $c.IPv4Address.IPAddress }
     $a = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' } | Select-Object -First 1
     if ($a) { return $a.IPAddress }
     return $null
+}
+
+function Ensure-FirewallRule($port) {
+    $name = "CampusTrade-Frontend-$port"
+    $existing = Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue
+    if ($existing) { return $true }
+    try {
+        New-NetFirewallRule -DisplayName $name -Direction Inbound -Protocol TCP -LocalPort $port -Action Allow -Profile Any -ErrorAction Stop | Out-Null
+        Say "      已添加防火墙放行规则（TCP $port）" Green
+        return $true
+    } catch {
+        Say "      [!] 无法自动添加防火墙规则（需要管理员权限）。请手动放行：" Yellow
+        Say "          控制面板 -> Windows Defender 防火墙 -> 高级设置 -> 入站规则 -> 新建规则 -> 端口 -> TCP $port -> 允许连接" Yellow
+        return $false
+    }
+}
+
+function Stop-Listener($port) {
+    $conns = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+    foreach ($c in $conns) {
+        try { Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue } catch { }
+    }
+    Start-Sleep -Seconds 2
 }
 
 Say ''
@@ -87,9 +117,28 @@ if (Test-Up $BackendPort '/api/v1/system/health') {
 }
 
 # ---------- 2) 前端（必须绑 0.0.0.0 才能被外部访问）----------
+# 先强制写出 .env.local，避免残留 127.0.0.1 导致外部访问失败
+$envLocal = Join-Path $feDir '.env.local'
+$envLines = @()
+$envLines += "DEV_PORT=$FrontendPort"
+$envLines += "DEV_HOST=0.0.0.0"
+$envLines += "DEV_API_TARGET=http://127.0.0.1:$BackendPort"
+$envLines += "DEV_ALLOWED_HOSTS=.trycloudflare.com,localhost,127.0.0.1"
+$envLines | Set-Content -Path $envLocal -Encoding UTF8
+
+$lan = Get-LanIp
+
+# 如果端口已起但局域网打不开，说明是旧进程绑在 127.0.0.1，杀掉重起
 if (Test-Up $FrontendPort '/') {
-    Say ("[2/3] 前端已在运行  http://127.0.0.1:$FrontendPort") Green
-} else {
+    if (-not (Test-LanUp $FrontendPort '/' $lan)) {
+        Say '[2/3] 端口已占用但局域网不可达，正在重启前端（旧进程绑在本机）...' Yellow
+        Stop-Listener $FrontendPort
+    } else {
+        Say ("[2/3] 前端已在运行  http://127.0.0.1:$FrontendPort") Green
+    }
+}
+
+if (-not (Test-Up $FrontendPort '/')) {
     if (-not (Test-Path (Join-Path $feDir 'node_modules'))) {
         Say '[2/3] 安装前端依赖（首次约 1-3 分钟）...'
         Push-Location $feDir
@@ -100,14 +149,26 @@ if (Test-Up $FrontendPort '/') {
         Say '[x] 前端启动超时' Red
         exit 1
     }
-    Say '      前端就绪（已监听 0.0.0.0）' Green
+    Say '      前端就绪' Green
+}
+
+# 防火墙：不放行的话局域网/公网都进不来
+Ensure-FirewallRule $FrontendPort | Out-Null
+
+# 局域网可达性自检
+$lanOk = Test-LanUp $FrontendPort '/' $lan
+if (-not $lanOk) {
+    Say '[!] 局域网自检失败：别人大概率打不开。常见原因：' Yellow
+    Say '    1. 防火墙未放行（上面的自动添加失败时需要手动）' Yellow
+    Say '    2. 电脑与手机不在同一 WiFi / 路由器开启了 AP 隔离' Yellow
+    Say '    3. 企业网络禁止端口互通' Yellow
 }
 
 # ---------- 3) 公网隧道 ----------
 $publicUrl = $null
 if (-not $NoTunnel) {
     if (-not (Test-Path $cf)) {
-        Say '[3/3] 首次需要下载 cloudflared（约 50MB）...'
+        Say '[3/3] 首次需要下载 cloudflared（约 50MB，国内可能较慢）...'
         try {
             Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' `
                 -OutFile $cf -UseBasicParsing -TimeoutSec 600
@@ -115,8 +176,6 @@ if (-not $NoTunnel) {
             Say ('[!] 下载失败（' + $_.Exception.Message + '），跳过公网隧道，仅局域网可用') Yellow
         }
     }
-    # 已有 cloudflared 在跑就复用它的地址：重复起隧道会留下多个进程，
-    # 而且只有最新的那个地址有效，容易把人搞混
     $existing = Get-Process cloudflared -ErrorAction SilentlyContinue
     if ($existing) {
         $prevLog = Join-Path $env:TEMP 'cloudflared-share.log'
@@ -142,37 +201,28 @@ if (-not $NoTunnel) {
             }
         }
         if ($publicUrl) {
-            # 隧道域名要进 Vite 的 allowedHosts，否则会被 Host 校验 403
-            $envLocal = Join-Path $feDir '.env.local'
-            $lines = if (Test-Path $envLocal) { Get-Content $envLocal -Encoding UTF8 } else { @() }
-            if (-not ($lines -match '^DEV_ALLOWED_HOSTS=')) {
-                Add-Content -Path $envLocal -Value 'DEV_ALLOWED_HOSTS=.trycloudflare.com,localhost,127.0.0.1' -Encoding UTF8
-            }
-            if (-not ($lines -match '^DEV_HOST=')) {
-                Add-Content -Path $envLocal -Value 'DEV_HOST=0.0.0.0' -Encoding UTF8
-            }
             Say '      隧道已建立' Green
         } else {
             Say '[!] 没能取到公网地址，请查看 %TEMP%\cloudflared-share.log' Yellow
+            Say '    常见原因：国内网络无法访问 cloudflare；可改用 ngrok（需注册）或把电脑部署到云服务器' Yellow
         }
     }
 }
 
 # ---------- 汇总 ----------
-$lan = Get-LanIp
 Say ''
 Say '============================================================' Green
 Say '  给别人打开这些地址：' Green
 Say '============================================================' Green
 if ($publicUrl) { Say ("    公网（任何网络）  " + $publicUrl) White }
-if ($lan) { Say ("    同一 WiFi        http://${lan}:$FrontendPort") White }
+if ($lan -and $lanOk) { Say ("    同一 WiFi        http://${lan}:$FrontendPort") White }
 Say ("    本机             http://localhost:$FrontendPort") White
 Say ''
 Say '  说明：' DarkGray
 Say '    · 公网地址走 Cloudflare quick tunnel，每次重启都会变，用完即弃' DarkGray
 Say '    · 别人只需要打开前端地址；/api 由前端开发服务器反代到后端，无需额外开放端口' DarkGray
 Say '    · 要固定域名/长期使用：部署到服务器，或用 cloudflared named tunnel' DarkGray
-Say '    · 演示账号：买家 13800001001 / admin123，卖家 13800001002 / admin123' DarkGray
+Say '    · 演示账号：管理员 15888888888 / admin123；买家 13800001001 / admin123' DarkGray
 Say ''
 
 if (-not $NoBrowser) { Start-Process ("http://localhost:$FrontendPort") | Out-Null }

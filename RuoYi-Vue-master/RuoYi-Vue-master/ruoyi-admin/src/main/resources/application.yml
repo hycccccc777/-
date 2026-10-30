@@ -18,6 +18,10 @@ campus:
     timeout-minutes: ${CAMPUS_ORDER_TIMEOUT_MINUTES:30}
     # 单次最多处理条数，避免一次扫描过重
     timeout-batch-limit: ${CAMPUS_ORDER_TIMEOUT_BATCH:200}
+  # 商品发布审核：开启后新商品为「待审核(0)」，管理员审核通过才出现在商品列表。
+  # 关闭后发布即上架，适合纯演示或内部环境。
+  product:
+    audit-enabled: ${CAMPUS_PRODUCT_AUDIT_ENABLED:true}
   # 接口限流总开关：测试或压测时可整体关闭
   ratelimit:
     enabled: true

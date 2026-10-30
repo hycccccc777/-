@@ -2,7 +2,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { schools } from '../data/products'
 import { readStorage, writeStorage } from '../utils/storage'
-import { authApi, productApi, cartApi, orderApi, paymentApi, refundApi, sellerApi, uploadApi, setTokens, setAccessToken, clearAccessToken } from '../api'
+import { authApi, productApi, cartApi, orderApi, paymentApi, refundApi, sellerApi, adminApi, uploadApi, setTokens, setAccessToken, clearAccessToken } from '../api'
 
 // 当前为本地演示状态。接入真实 API 前，按 docs/接口对接说明.md 替换数据来源。
 // 此处的昵称、金额和 localStorage 均不能作为服务端认证或定价依据。
@@ -23,6 +23,7 @@ const storedFavorites = readStorage('ct.favorites', [])
 const favorites = ref(Array.isArray(storedFavorites) ? storedFavorites.filter(x => typeof x === 'string') : [])
 // 真实登录态：用户信息来自后端，令牌仅内存保存，浏览器刷新后需重新登录。
 const user = ref(null)
+const isAdmin = computed(() => !!(user.value && (user.value.admin || (Array.isArray(user.value.roles) && user.value.roles.includes('admin')) || user.value.role === 'admin')))
 // 订单来自服务端：已映射为页面展示结构
 const orders = ref([])
 const checkoutKey = ref('')
@@ -31,7 +32,7 @@ const sellerProducts = ref([])
 const sellerOrders = ref([])
 const sellerRefunds = ref([])
 const sellerLoading = ref(false)
-const page = ref(['home', 'favorites', 'cart', 'profile', 'seller'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home')
+const page = ref(['home', 'favorites', 'cart', 'profile', 'seller', 'admin'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home')
 const keyword = ref('')
 const category = ref('all')
 const school = ref('全部学校')
@@ -78,10 +79,11 @@ watch(page, value => {
   if (value === 'cart') loadCart()
   if (value === 'profile') loadOrders()
   if (value === 'seller') loadSellerCenter()
+  if (value === 'admin') loadAdminCenter()
 })
 function syncHash() {
   const target = location.hash.slice(1)
-  page.value = ['home', 'favorites', 'cart', 'profile', 'seller'].includes(target) ? target : 'home'
+  page.value = ['home', 'favorites', 'cart', 'profile', 'seller', 'admin'].includes(target) ? target : 'home'
 }
 onMounted(() => { window.addEventListener('hashchange', syncHash); fetchCategories(); fetchProducts(false) })
 onUnmounted(() => window.removeEventListener('hashchange', syncHash))
@@ -290,6 +292,7 @@ function mapSellerProduct(p) {
     price: Number(p.price),
     status: p.status,
     statusText: PRODUCT_STATUS[p.status] || p.status,
+    auditRemark: p.auditRemark || '',
     stock: p.stock,
     viewCount: p.viewCount || 0,
     cover: p.coverUrl || '',
@@ -314,6 +317,43 @@ async function loadSellerCenter() {
     ElMessage.error(e?.message || '卖家中心数据加载失败')
   } finally {
     sellerLoading.value = false
+  }
+}
+async function loadAdminCenter() {
+  if (!user.value || !isAdmin.value) {
+    adminProducts.value = []; adminUsers.value = []
+    return
+  }
+  adminLoading.value = true
+  try {
+    const results = await Promise.all([adminApi.pendingProducts({ page: 1, size: 50 }), adminApi.users({ page: 1, size: 50 })])
+    adminProducts.value = Array.isArray(results[0]?.list) ? results[0].list : (Array.isArray(results[0]) ? results[0] : [])
+    adminUsers.value = Array.isArray(results[1]?.list) ? results[1].list : (Array.isArray(results[1]) ? results[1] : [])
+  } catch (e) {
+    ElMessage.error(e?.message || '管理后台数据加载失败')
+  } finally {
+    adminLoading.value = false
+  }
+}
+async function approveProduct(product) {
+  try {
+    await adminApi.auditProduct(product.id || product.productId, { approve: true })
+    ElMessage.success('已通过审核，商品上架')
+    await loadAdminCenter()
+  } catch (e) {
+    ElMessage.error(e?.message || '审核失败')
+  }
+}
+async function rejectProduct(product) {
+  try {
+    const { value } = await ElMessageBox.prompt('请输入驳回原因（将展示给卖家）', '驳回商品', {
+      confirmButtonText: '驳回', cancelButtonText: '取消', inputPattern: /\S+/, inputErrorMessage: '请填写驳回原因',
+    })
+    await adminApi.auditProduct(product.id || product.productId, { approve: false, remark: value })
+    ElMessage.success('已驳回')
+    await loadAdminCenter()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') ElMessage.error(e?.message || '驳回失败')
   }
 }
 async function toggleProductStatus(product) {
@@ -548,7 +588,7 @@ async function submitPublish() {
   if (!p.location.trim() || p.description.trim().length < 10) return ElMessage.warning('请填写交接地点与至少 10 个字的描述')
   if (!requireUser()) return
   try {
-    await productApi.create({
+    const created = await productApi.create({
       title: p.title.trim(),
       categoryId: Number(p.category),
       price: Math.round(price * 100) / 100,
@@ -560,9 +600,16 @@ async function submitPublish() {
     publishOpen.value = false
     publish.value = { title: '', category: '', price: '', condition: '九成新', location: '', description: '' }
     publishImage.value = ''
-    navigate('home')
-    refreshList()
-    notify('发布成功，已上架')
+    if (created?.status === '0') {
+      // 审核开启：商品进入待审核，先带卖家去卖家中心看到它，而不是假装已上架
+      navigate('seller')
+      loadSellerCenter()
+      notify('发布成功，等待管理员审核后上架')
+    } else {
+      navigate('home')
+      refreshList()
+      notify('发布成功，已上架')
+    }
   } catch (error) {
     ElMessage.error(error?.message || '发布失败，请稍后重试')
   }
@@ -606,5 +653,5 @@ async function submitOrder() {
   }
 }
 
-return { categories, schools, page, keyword, category, school, condition, sort, detail, detailOpen, loginOpen, publishOpen, checkoutOpen, loginPhone, loginPassword, loginLoading, loginError, authMode, registerPhone, registerNickname, registerPassword, registerConfirm, registerLoading, registerError, resetAuthForm, address, receiver, contact, remark, submittingOrder, publish, publishImage, publishUploading, uploadPublishImage, user, favorites, orders, displayProducts, displayTotal, listLoading, listError, hasMore, loadMore, refreshList, cartProducts, selectedItems, total, allSelected, myProducts, money, toggleFavorite, addCart, removeCart, updateQty, selectItem, toggleAll, loadCart, loadOrders, cancelOrder, payOrder, confirmReceive, applyRefund, payingOrder, loadSellerCenter, sellerTab, sellerProducts, sellerOrders, sellerRefunds, sellerLoading, toggleProductStatus, removeMyProduct, shipOrder, agreeRefund, completeRefund, rejectRefund, resetFilters, navigate, search, submitLogin, submitRegister, logout, openPublish, submitPublish, startCheckout, submitOrder }
+return { categories, schools, page, keyword, category, school, condition, sort, detail, detailOpen, loginOpen, publishOpen, checkoutOpen, loginPhone, loginPassword, loginLoading, loginError, authMode, registerPhone, registerNickname, registerPassword, registerConfirm, registerLoading, registerError, resetAuthForm, address, receiver, contact, remark, submittingOrder, publish, publishImage, publishUploading, uploadPublishImage, user, isAdmin, favorites, orders, displayProducts, displayTotal, listLoading, listError, hasMore, loadMore, refreshList, cartProducts, selectedItems, total, allSelected, myProducts, money, toggleFavorite, addCart, removeCart, updateQty, selectItem, toggleAll, loadCart, loadOrders, cancelOrder, payOrder, confirmReceive, applyRefund, payingOrder, loadSellerCenter, sellerTab, sellerProducts, sellerOrders, sellerRefunds, sellerLoading, toggleProductStatus, removeMyProduct, shipOrder, agreeRefund, completeRefund, rejectRefund, resetFilters, navigate, search, submitLogin, submitRegister, logout, openPublish, submitPublish, startCheckout, submitOrder, adminTab, adminProducts, adminUsers, adminLoading, loadAdminCenter, approveProduct, rejectProduct }
 }

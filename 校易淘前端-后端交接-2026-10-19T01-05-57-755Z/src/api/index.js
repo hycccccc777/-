@@ -92,6 +92,11 @@ export const refundApi = {
   reject: (refundNo, body) => request('/refunds/' + segment(refundNo) + '/reject', { method: 'POST', body, ...auth }),
   complete: refundNo => request('/refunds/' + segment(refundNo) + '/complete', { method: 'POST', ...auth }),
 }
+export const adminApi = {
+  pendingProducts: query => request('/admin/products/pending', { query, ...auth }),
+  auditProduct: (id, body) => request('/admin/products/' + segment(id) + '/audit', { method: 'POST', body, ...auth }),
+  users: query => request('/admin/users', { query, ...auth }),
+}
 export const sellerApi = {
   products: query => request('/my/products', { query, ...auth }),
   updateProduct: (id, body) => request('/my/products/' + segment(id), { method: 'PUT', body, ...auth }),

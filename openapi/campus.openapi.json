@@ -33,6 +33,10 @@
       "description": "建单、查状态、确认与网关回调"
     },
     {
+      "name": "用户管理",
+      "description": "管理员查看用户列表"
+    },
+    {
       "name": "卖家中心",
       "description": "我发布的商品管理"
     },
@@ -43,6 +47,10 @@
     {
       "name": "退款",
       "description": "申请、审核与完成"
+    },
+    {
+      "name": "商品审核",
+      "description": "管理员审核待发布商品"
     },
     {
       "name": "购物车",
@@ -950,6 +958,50 @@
         }
       }
     },
+    "/api/v1/admin/products/{id}/audit": {
+      "post": {
+        "tags": [
+          "商品审核"
+        ],
+        "summary": "审核商品",
+        "description": "仅管理员；approve=true 上架，false 驳回并记录原因",
+        "operationId": "audit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CtProductAuditBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/user/info": {
       "get": {
         "tags": [
@@ -1222,6 +1274,112 @@
         ],
         "summary": "我的购物车",
         "operationId": "list_3",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "用户列表",
+        "description": "仅管理员；按用户名/手机号模糊过滤",
+        "operationId": "users",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/products/pending": {
+      "get": {
+        "tags": [
+          "商品审核"
+        ],
+        "summary": "待审核商品列表",
+        "description": "仅管理员；按发布时间倒序",
+        "operationId": "pending",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CtProductVo"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1515,6 +1673,17 @@
             "type": "string"
           },
           "password": {
+            "type": "string"
+          }
+        }
+      },
+      "CtProductAuditBody": {
+        "type": "object",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          },
+          "remark": {
             "type": "string"
           }
         }

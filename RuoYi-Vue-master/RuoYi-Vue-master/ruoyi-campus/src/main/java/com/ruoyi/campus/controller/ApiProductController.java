@@ -22,7 +22,6 @@ import com.ruoyi.campus.domain.vo.CtProductVo;
 import com.ruoyi.campus.service.ICtProductService;
 import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.common.utils.SecurityUtils;
-import com.ruoyi.common.utils.StringUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -57,11 +56,9 @@ public class ApiProductController
         {
             size = 12;
         }
-        if (StringUtils.isEmpty(query.getStatus()))
-        {
-            // ???????б????????????
-            query.setStatus("1");
-        }
+        // 公开列表永远只展示「已上架(1)」：忽略调用方传入的 status，
+        // 否则 ?status=0 就能把待审核 / 驳回 / 下架商品翻出来。
+        query.setStatus("1");
         PageHelper.startPage(page, size);
         try
         {

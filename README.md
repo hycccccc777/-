@@ -283,9 +283,9 @@ mvn -pl ruoyi-admin -am test
 mvn -pl ruoyi-admin -am test "-Dtest=StockConcurrencyTest"
 ```
 
-### 现有用例（53 后端 + 19 前端 = 72 个，全部通过）
+### 现有用例（59 后端 + 19 前端 = 78 个，全部通过）
 
-> 数据来源：`ruoyi-admin/target/surefire-reports` 实测 Tests run: 53, Failures: 0, Errors: 0；
+> 数据来源：`ruoyi-admin/target/surefire-reports` 实测 Tests run: 59, Failures: 0, Errors: 0；
 > 前端 `npm test` 实测 `tests 19 / pass 19 / fail 0`。
 
 
@@ -305,8 +305,11 @@ mvn -pl ruoyi-admin -am test "-Dtest=StockConcurrencyTest"
 | `OrderTimeoutTest` | 单批上限 + 重复执行 | 分批处理、多轮幂等，库存只回滚一次 |
 | `RegisterFlowTest` | 注册成功 | 密码 BCrypt 落库、注册后可直接登录 |
 | `RegisterFlowTest` | 昵称缺省 / 重复手机号 / 弱密码 | 默认昵称用后四位；409 拦截重复；400 拦截非法输入且不落库 |
+| `ProductAuditTest` | 待审核不对外展示 | 新商品为 status 0，公开列表不包含 |
+| `ProductAuditTest` | 审核通过 / 驳回 / 重新提交 | 通过后上架并出现在公开列表；驳回记录原因；卖家修改后重新待审核 |
+| `ProductAuditTest` | 绕过审核 / 重复审核 / 越权 | 待审核不能自行上下架（409）；非待审核不能重复审核；非管理员访问返回 403 |
 
-> 上表只列**最能说明问题**的 15 条；完整 53 条见 `surefire-reports`，另有 19 条前端用例（HTTP 层、错误契约、令牌刷新、自动登出）。
+> 上表只列**最能说明问题**的 19 条；完整 59 条见 `surefire-reports`，另有 19 条前端用例（HTTP 层、错误契约、令牌刷新、自动登出）。
 
 ### 演示脚本（可反复跑）
 
@@ -746,7 +749,6 @@ powershell -File scripts\demo-canary.ps1
 - **配送费**：暂恒为 0，未区分自提 / 配送计费。
 - **收货地址管理**：无 `/api/v1/addresses`，结算时直接提交收货人/电话/地址，由后端做快照。
 - **收藏**：仍为前端本地存储，未服务端化。
-- **商品审核**：新发布商品直接上架（`status=1`），若需审核改为 `0` 并在后台加审核动作。
 - **部分退款 / 售后**：仅支持全额退款；已完成订单不支持售后。
 - **熔断降级**：未引入 Resilience4j；限流器对 Redis 故障 fail-open。
 - **静态检查 / E2E**：未接入 Checkstyle / ESLint / Playwright。
@@ -762,6 +764,8 @@ powershell -File scripts\demo-canary.ps1
 | 定时任务集群 | `job-store-type=jdbc` + Flyway V3；双实例 `QRTZ_SCHEDULER_STATE` 2 行，`sys_job_log` 严格 10 秒一条无重复 |
 | HTTPS | `application-https.yml` + 自签证书，`https://localhost:8443` 实测 200 |
 | 未支付订单超时取消 | `campusOrderTask.cancelTimeoutOrders()` 每分钟扫描；`OrderTimeoutTest` 5 条用例 + `demo-order-timeout.ps1` 实测下单不付款 15 秒内被取消、库存回滚 |
+| 商品发布审核 | `campus.product.audit-enabled` 开关；新商品 status 0；`/api/v1/admin/products/pending` + `/audit`；`ProductAuditTest` 6 条；卖家中心显示待审核/驳回原因 |
+| 管理端前端 | 消费端内嵌「管理后台」视图（商品审核 + 用户列表），管理员账号登录后导航栏出现入口 |
 
 ---
 ## 依赖巡检与待处置 PR

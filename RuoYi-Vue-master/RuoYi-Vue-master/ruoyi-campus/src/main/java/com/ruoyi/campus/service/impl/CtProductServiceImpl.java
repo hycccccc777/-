@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.campus.api.ApiException;
@@ -32,6 +33,10 @@ public class CtProductServiceImpl implements ICtProductService
 
     @Autowired
     private ICtProductImageService ctProductImageService;
+
+    /** 商品发布是否需要审核：true=新商品进入待审核(0)，false=发布即上架(1) */
+    @Value("${campus.product.audit-enabled:true}")
+    private boolean auditEnabled;
 
     @Override
     public List<CtProduct> selectCtProductList(CtProduct ctProduct)
@@ -109,8 +114,10 @@ public class CtProductServiceImpl implements ICtProductService
         product.setTag(body.getTag());
         product.setDescription(body.getDescription());
         product.setCoverUrl(images.isEmpty() ? "" : images.get(0));
-        // 演示环境直接上架；如需审核流程，将 status 改为 "0" 走后台审核
-        product.setStatus("1");
+        // 审核开启时先进「待审核(0)」，由管理员通过后才出现在商品列表；
+        // 关闭时直接上架，适合纯演示或内部环境。
+        product.setStatus(auditEnabled ? "0" : "1");
+        product.setAuditRemark("");
         product.setViewCount(0);
         product.setFavoriteCount(0);
         product.setCreateBy(SecurityUtils.getUsername());
@@ -200,6 +207,12 @@ public class CtProductServiceImpl implements ICtProductService
         {
             product.setTag(patch.getTag());
         }
+        if (auditEnabled && "3".equals(product.getStatus()))
+        {
+            // 被驳回的商品，卖家修改后重新进入待审核，避免驳回后永久卡死
+            product.setStatus("0");
+            product.setAuditRemark("");
+        }
         product.setUpdateBy(SecurityUtils.getUsername());
         return ctProductMapper.updateCtProduct(product);
     }
@@ -216,7 +229,38 @@ public class CtProductServiceImpl implements ICtProductService
         {
             throw new ApiException(409, "已售出的商品不可上下架");
         }
+        if (!"1".equals(product.getStatus()) && !"2".equals(product.getStatus()))
+        {
+            throw new ApiException(409, "商品尚未通过审核，暂不能上下架");
+        }
         product.setStatus(status);
+        product.setUpdateBy(SecurityUtils.getUsername());
+        return ctProductMapper.updateCtProduct(product);
+    }
+
+    @Override
+    public int auditProduct(Long productId, boolean approve, String remark)
+    {
+        CtProduct product = ctProductMapper.selectCtProductById(productId);
+        if (product == null)
+        {
+            throw new ApiException(404, "商品不存在");
+        }
+        if (!"0".equals(product.getStatus()))
+        {
+            throw new ApiException(409, "该商品不在待审核状态，无需重复审核");
+        }
+        if (approve)
+        {
+            product.setStatus("1");
+            product.setAuditRemark("");
+        }
+        else
+        {
+            String reason = StringUtils.isEmpty(StringUtils.trim(remark)) ? "不符合校园二手发布规范" : StringUtils.trim(remark);
+            product.setStatus("3");
+            product.setAuditRemark(reason.length() > 200 ? reason.substring(0, 200) : reason);
+        }
         product.setUpdateBy(SecurityUtils.getUsername());
         return ctProductMapper.updateCtProduct(product);
     }
