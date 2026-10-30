@@ -128,13 +128,12 @@ $envLines | Set-Content -Path $envLocal -Encoding UTF8
 
 $lan = Get-LanIp
 
-# 如果端口已起但局域网打不开，说明是旧进程绑在 127.0.0.1，杀掉重起
+# 如果端口已起就直接复用：即使它只绑了 127.0.0.1，公网隧道连的也是 127.0.0.1，
+# 仍能正常打开；贸然杀掉反而会把正在工作的 tunnel 变成 502。
 if (Test-Up $FrontendPort '/') {
+    Say ("[2/3] 前端已在运行  http://127.0.0.1:$FrontendPort") Green
     if (-not (Test-LanUp $FrontendPort '/' $lan)) {
-        Say '[2/3] 端口已占用但局域网不可达，正在重启前端（旧进程绑在本机）...' Yellow
-        Stop-Listener $FrontendPort
-    } else {
-        Say ("[2/3] 前端已在运行  http://127.0.0.1:$FrontendPort") Green
+        Say '      （局域网地址可能不可用，但公网隧道不受影响）' DarkGray
     }
 }
 
@@ -144,9 +143,13 @@ if (-not (Test-Up $FrontendPort '/')) {
         Push-Location $feDir
         try { & npm.cmd ci --registry=https://registry.npmmirror.com } finally { Pop-Location }
     } else { Say '[2/3] 启动前端...' }
-    Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', "cd /d `"$feDir`" && npm run dev") -WindowStyle Minimized | Out-Null
+    # 隐藏窗口 + 日志落盘：避免误关窗口把 Vite 一起带走，出问题时也能看日志
+    $viteLog = Join-Path $env:TEMP 'campus-vite.log'
+    Remove-Item $viteLog -ErrorAction SilentlyContinue
+    Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', "cd /d `"$feDir`" && npm run dev > `"$viteLog`" 2>&1") -WindowStyle Hidden | Out-Null
     if (-not (Wait-Up $FrontendPort '/' 90)) {
-        Say '[x] 前端启动超时' Red
+        Say '[x] 前端启动超时，日志如下（%TEMP%\campus-vite.log）:' Red
+        if (Test-Path $viteLog) { Get-Content $viteLog -Encoding UTF8 -ErrorAction SilentlyContinue | Select-Object -Last 20 | ForEach-Object { Say ("      " + $_) DarkGray } }
         exit 1
     }
     Say '      前端就绪' Green
@@ -210,6 +213,28 @@ if (-not $NoTunnel) {
 }
 
 # ---------- 汇总 ----------
+# 端到端自检：隧道必须能真的打开前端（不只是进程在跑）
+if ($publicUrl) {
+    $tunnelOk = $false
+    for ($i = 0; $i -lt 15; $i++) {
+        try {
+            $r = Invoke-WebRequest -Uri $publicUrl -UseBasicParsing -TimeoutSec 8
+            if ($r.StatusCode -eq 200 -and $r.Content -match 'id="app"') { $tunnelOk = $true; break }
+        } catch { }
+        Start-Sleep -Seconds 2
+    }
+    if ($tunnelOk) {
+        Say '      公网地址自检通过' Green
+    } else {
+        Say '[!] 公网地址暂时打不开（隧道已建但源站不可达）' Yellow
+        if (-not (Test-Up $FrontendPort '/')) {
+            Say '    前端已停止，请重新运行本脚本；日志见 %TEMP%\campus-vite.log' Yellow
+        } else {
+            Say '    前端在跑但隧道访问失败，检查 %TEMP%\cloudflared-share.log' Yellow
+        }
+    }
+}
+
 Say ''
 Say '============================================================' Green
 Say '  给别人打开这些地址：' Green
