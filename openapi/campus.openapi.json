@@ -21,32 +21,16 @@
   ],
   "tags": [
     {
-      "name": "类目",
-      "description": "启用中类目（公开）"
-    },
-    {
-      "name": "系统",
-      "description": "探活等与业务无关的基础接口"
-    },
-    {
       "name": "支付",
       "description": "建单、查状态、确认与网关回调"
     },
     {
-      "name": "用户管理",
-      "description": "管理员查看用户列表"
+      "name": "短信验证码",
+      "description": "注册/登录/找回密码验证码"
     },
     {
       "name": "卖家中心",
       "description": "我发布的商品管理"
-    },
-    {
-      "name": "认证",
-      "description": "手机号登录、刷新令牌、退出与当前用户"
-    },
-    {
-      "name": "退款",
-      "description": "申请、审核与完成"
     },
     {
       "name": "商品审核",
@@ -61,12 +45,36 @@
       "description": "下单、查询、取消、收货与发货"
     },
     {
-      "name": "文件上传",
-      "description": "图片上传"
-    },
-    {
       "name": "商品",
       "description": "列表、详情与发布"
+    },
+    {
+      "name": "类目",
+      "description": "启用中类目（公开）"
+    },
+    {
+      "name": "系统",
+      "description": "探活等与业务无关的基础接口"
+    },
+    {
+      "name": "系统配置",
+      "description": "前端启动时读取的运行期能力开关"
+    },
+    {
+      "name": "用户管理",
+      "description": "管理员查看用户列表"
+    },
+    {
+      "name": "认证",
+      "description": "手机号登录、刷新令牌、退出与当前用户"
+    },
+    {
+      "name": "退款",
+      "description": "申请、审核与完成"
+    },
+    {
+      "name": "文件上传",
+      "description": "图片上传"
     }
   ],
   "paths": {
@@ -370,7 +378,7 @@
           "文件上传"
         ],
         "summary": "上传图片",
-        "description": "返回可访问相对地址，需登录",
+        "description": "返回可访问地址，需登录",
         "operationId": "upload",
         "requestBody": {
           "content": {
@@ -836,6 +844,39 @@
         }
       }
     },
+    "/api/v1/auth/sms/send": {
+      "post": {
+        "tags": [
+          "短信验证码"
+        ],
+        "summary": "发送验证码",
+        "description": "同一手机号有发送间隔与每日上限",
+        "operationId": "send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CtSmsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/register": {
       "post": {
         "tags": [
@@ -1229,6 +1270,29 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config": {
+      "get": {
+        "tags": [
+          "系统配置"
+        ],
+        "summary": "运行期配置",
+        "description": "短信开关、默认支付方式、注册开关",
+        "operationId": "config",
         "responses": {
           "200": {
             "description": "OK",
@@ -1640,6 +1704,17 @@
           "cartItemIds"
         ]
       },
+      "CtSmsBody": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string"
+          },
+          "scene": {
+            "type": "string"
+          }
+        }
+      },
       "CtRegisterBody": {
         "type": "object",
         "properties": {
@@ -1650,6 +1725,9 @@
             "type": "string"
           },
           "password": {
+            "type": "string"
+          },
+          "smsCode": {
             "type": "string"
           }
         }

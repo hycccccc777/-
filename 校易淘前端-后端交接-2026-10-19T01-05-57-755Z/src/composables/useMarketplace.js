@@ -2,7 +2,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { schools } from '../data/products'
 import { readStorage, writeStorage } from '../utils/storage'
-import { authApi, productApi, cartApi, orderApi, paymentApi, refundApi, sellerApi, adminApi, uploadApi, setTokens, setAccessToken, clearAccessToken } from '../api'
+import { authApi, productApi, cartApi, orderApi, paymentApi, refundApi, sellerApi, adminApi, uploadApi, configApi, setTokens, setAccessToken, clearAccessToken } from '../api'
 
 // 当前为本地演示状态。接入真实 API 前，按 docs/接口对接说明.md 替换数据来源。
 // 此处的昵称、金额和 localStorage 均不能作为服务端认证或定价依据。
@@ -58,6 +58,11 @@ const registerPassword = ref('')
 const registerConfirm = ref('')
 const registerLoading = ref(false)
 const registerError = ref('')
+const registerSmsCode = ref('')
+const smsEnabled = ref(false)
+const smsSending = ref(false)
+const smsCountdown = ref(0)
+const payMethod = ref('0')
 const address = ref('')
 const receiver = ref('')
 const contact = ref('')
@@ -89,7 +94,7 @@ function syncHash() {
   const target = location.hash.slice(1)
   page.value = ['home', 'favorites', 'cart', 'profile', 'seller', 'admin'].includes(target) ? target : 'home'
 }
-onMounted(() => { window.addEventListener('hashchange', syncHash); fetchCategories(); fetchProducts(false) })
+onMounted(() => { window.addEventListener('hashchange', syncHash); fetchCategories(); fetchProducts(false); loadRuntimeConfig() })
 onUnmounted(() => window.removeEventListener('hashchange', syncHash))
 
 // 收藏页仍为本地收藏（需求暂未提供收藏接口）
@@ -245,9 +250,9 @@ async function payOrder(orderNo) {
   if (payingOrder.value) return
   payingOrder.value = orderNo
   try {
-    const pay = await paymentApi.create({ orderNo, payMethod: '0' })
+    const pay = await paymentApi.create({ orderNo, payMethod: payMethod.value })
     await paymentApi.confirm(pay && pay.payNo)
-    ElMessage.success('支付成功，等待卖家发货')
+    ElMessage.success(payMethod.value === '4' ? '已确认线下付款，等待卖家交付' : '支付成功，等待卖家发货')
     await loadOrders()
     refreshList()
   } catch (error) {
@@ -515,6 +520,38 @@ function resetAuthForm() {
   registerError.value = ''
   registerPassword.value = ''
   registerConfirm.value = ''
+  registerSmsCode.value = ''
+}
+async function loadRuntimeConfig() {
+  try {
+    const cfg = await configApi()
+    smsEnabled.value = !!cfg?.smsEnabled
+    if (cfg?.payMethod) payMethod.value = String(cfg.payMethod)
+  } catch (e) {
+    // 配置接口失败时保持默认：不发短信、沙箱支付
+  }
+}
+let smsTimer = null
+async function sendSmsCode() {
+  const phone = registerPhone.value.trim()
+  if (!/^1[3-9]\d{9}$/.test(phone)) { registerError.value = '请先输入有效的 11 位手机号'; return ElMessage.warning(registerError.value) }
+  if (smsCountdown.value > 0) return
+  smsSending.value = true
+  try {
+    await authApi.smsSend({ phone, scene: 'register' })
+    notify('验证码已发送，请查收短信')
+    smsCountdown.value = 60
+    if (smsTimer) clearInterval(smsTimer)
+    smsTimer = setInterval(() => {
+      smsCountdown.value -= 1
+      if (smsCountdown.value <= 0) { clearInterval(smsTimer); smsTimer = null }
+    }, 1000)
+  } catch (error) {
+    registerError.value = error?.message || '验证码发送失败'
+    ElMessage.error(registerError.value)
+  } finally {
+    smsSending.value = false
+  }
 }
 async function submitRegister() {
   registerError.value = ''
@@ -522,9 +559,10 @@ async function submitRegister() {
   if (!/^1[3-9]\d{9}$/.test(phone)) { registerError.value = '请输入有效的 11 位手机号'; return ElMessage.warning(registerError.value) }
   if (registerPassword.value.length < 6 || registerPassword.value.length > 20) { registerError.value = '密码长度需为 6 到 20 个字符'; return ElMessage.warning(registerError.value) }
   if (registerPassword.value !== registerConfirm.value) { registerError.value = '两次输入的密码不一致'; return ElMessage.warning(registerError.value) }
+  if (smsEnabled.value && !registerSmsCode.value.trim()) { registerError.value = '请输入短信验证码'; return ElMessage.warning(registerError.value) }
   registerLoading.value = true
   try {
-    const data = await authApi.register({ phone, nickname: registerNickname.value.trim(), password: registerPassword.value })
+    const data = await authApi.register({ phone, nickname: registerNickname.value.trim(), password: registerPassword.value, smsCode: registerSmsCode.value.trim() })
     setTokens(data)
     let profile = data?.user
     try {
@@ -657,5 +695,5 @@ async function submitOrder() {
   }
 }
 
-return { categories, schools, page, keyword, category, school, condition, sort, detail, detailOpen, loginOpen, publishOpen, checkoutOpen, loginPhone, loginPassword, loginLoading, loginError, authMode, registerPhone, registerNickname, registerPassword, registerConfirm, registerLoading, registerError, resetAuthForm, address, receiver, contact, remark, submittingOrder, publish, publishImage, publishUploading, uploadPublishImage, user, isAdmin, favorites, orders, displayProducts, displayTotal, listLoading, listError, hasMore, loadMore, refreshList, cartProducts, selectedItems, total, allSelected, myProducts, money, toggleFavorite, addCart, removeCart, updateQty, selectItem, toggleAll, loadCart, loadOrders, cancelOrder, payOrder, confirmReceive, applyRefund, payingOrder, loadSellerCenter, sellerTab, sellerProducts, sellerOrders, sellerRefunds, sellerLoading, toggleProductStatus, removeMyProduct, shipOrder, agreeRefund, completeRefund, rejectRefund, resetFilters, navigate, search, submitLogin, submitRegister, logout, openPublish, submitPublish, startCheckout, submitOrder, adminTab, adminProducts, adminUsers, adminLoading, loadAdminCenter, approveProduct, rejectProduct }
+return { categories, schools, page, keyword, category, school, condition, sort, detail, detailOpen, loginOpen, publishOpen, checkoutOpen, loginPhone, loginPassword, loginLoading, loginError, authMode, registerPhone, registerNickname, registerPassword, registerConfirm, registerLoading, registerError, registerSmsCode, smsEnabled, smsSending, smsCountdown, sendSmsCode, payMethod, resetAuthForm, address, receiver, contact, remark, submittingOrder, publish, publishImage, publishUploading, uploadPublishImage, user, isAdmin, favorites, orders, displayProducts, displayTotal, listLoading, listError, hasMore, loadMore, refreshList, cartProducts, selectedItems, total, allSelected, myProducts, money, toggleFavorite, addCart, removeCart, updateQty, selectItem, toggleAll, loadCart, loadOrders, cancelOrder, payOrder, confirmReceive, applyRefund, payingOrder, loadSellerCenter, sellerTab, sellerProducts, sellerOrders, sellerRefunds, sellerLoading, toggleProductStatus, removeMyProduct, shipOrder, agreeRefund, completeRefund, rejectRefund, resetFilters, navigate, search, submitLogin, submitRegister, logout, openPublish, submitPublish, startCheckout, submitOrder, adminTab, adminProducts, adminUsers, adminLoading, loadAdminCenter, approveProduct, rejectProduct }
 }

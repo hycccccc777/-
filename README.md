@@ -118,6 +118,14 @@ scripts\backup.ps1                 :: 数据库备份（需 CAMPUS_DB_PASSWORD�
 
 停止：双击 `停止.cmd`（会停 8080、5174 和 cloudflared）。
 
+### 真正上线（生产环境）
+
+演示环境与生产环境只差一个 profile：`SPRING_PROFILES_ACTIVE=druid,prod`。
+
+- 生产 profile 会启用 `ProductionGuard` 启动自检：默认 JWT 密钥、通配 CORS、沙箱支付会**直接拒绝启动**
+- 支付默认「线下面交（4）」；短信验证码接腾讯云；图片接腾讯云 COS（未配置凭据时自动回退本地/打印验证码）
+- 完整步骤见 `docs/上线部署.md`，环境变量见 `.env.example`
+
 ### 三个常见「别人打不开」的原因
 
 > **最快解决**：如果别人打不开，右键 `让别人打开.cmd` → **以管理员身份运行**（脚本会自动添加防火墙放行规则 TCP 5174）；仍失败再按下面排查。

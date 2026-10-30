@@ -48,9 +48,11 @@ export const systemApi = {
 export const authApi = {
   login: body => request('/auth/login', { method: 'POST', body }),
   register: body => request('/auth/register', { method: 'POST', body }),
+  smsSend: body => request('/auth/sms/send', { method: 'POST', body }),
   logout: () => request('/auth/logout', { method: 'POST', ...auth }),
   userInfo: () => request('/user/info', auth),
 }
+export const configApi = () => request('/config')
 export const productApi = {
   list: query => request('/products', { query }),
   detail: id => request('/products/' + segment(id)),

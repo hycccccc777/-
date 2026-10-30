@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.campus.api.ApiException;
@@ -49,6 +50,13 @@ public class CtPaymentServiceImpl implements ICtPaymentService
 
     @Autowired
     private PaymentGatewayRegistry gatewayRegistry;
+
+    /**
+     * 默认支付方式：前端不传 payMethod 时使用。
+     * 开发默认沙箱(0)，生产 profile 默认线下面交(4)。
+     */
+    @Value("${campus.payment.method:0}")
+    private String defaultPayMethod;
 
     @Override
     public List<CtPayment> selectCtPaymentList(CtPayment ctPayment)
@@ -107,7 +115,7 @@ public class CtPaymentServiceImpl implements ICtPaymentService
             throw new ApiException(409, "订单当前状态不可支付");
         }
 
-        String method = StringUtils.isEmpty(payMethod) ? "0" : payMethod;
+        String method = StringUtils.isEmpty(payMethod) ? defaultPayMethod : payMethod;
         PaymentGateway gateway = gatewayRegistry.resolve(method);
 
         CtPayment payment = new CtPayment();

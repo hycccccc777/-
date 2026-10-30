@@ -31,6 +31,8 @@ temp/
 secrets/
 **/application-prod.yml
 **/application-local.yml
+# 例外：本项目生产 profile 模板（只引用环境变量，不含任何密钥），必须入库
+!RuoYi-Vue-master/RuoYi-Vue-master/ruoyi-admin/src/main/resources/application-prod.yml
 
 # =====================================================================
 # IDE

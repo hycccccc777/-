@@ -16,6 +16,9 @@ public class CtRegisterBody
     /** 密码 */
     private String password;
 
+    /** 短信验证码（开启短信验证时必填） */
+    private String smsCode;
+
     public String getPhone()
     {
         return phone;
@@ -44,5 +47,15 @@ public class CtRegisterBody
     public void setPassword(String password)
     {
         this.password = password;
+    }
+
+    public String getSmsCode()
+    {
+        return smsCode;
+    }
+
+    public void setSmsCode(String smsCode)
+    {
+        this.smsCode = smsCode;
     }
 }

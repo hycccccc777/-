@@ -50,6 +50,9 @@ public class CtAuthServiceImpl implements ICtAuthService
     @Autowired
     private RefreshTokenService refreshTokenService;
 
+    @Autowired
+    private com.ruoyi.campus.sms.SmsCodeService smsCodeService;
+
     /** 令牌有效期（分钟），与若依 token.expireTime 保持一致 */
     @Value("${token.expireTime}")
     private int expireTime;
@@ -132,6 +135,8 @@ public class CtAuthServiceImpl implements ICtAuthService
         {
             throw new ApiException(400, "请输入有效的 11 位手机号");
         }
+        // 开启短信验证时，注册必须携带并校验验证码（关闭时直接跳过，兼容旧用例）
+        smsCodeService.verify(phone, "register", body.getSmsCode());
         if (password.length() < 6 || password.length() > 20)
         {
             throw new ApiException(400, "密码长度需为 6 到 20 个字符");
